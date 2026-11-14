@@ -1,7 +1,7 @@
 // Offline-first service worker. Puzzles are generated in the page, so once the
 // shell is cached the whole app works with no network at all.
 
-const VERSION = 'v3';
+const VERSION = 'v4';
 const CACHE = `daily-games-${VERSION}`;
 
 const ASSETS = [

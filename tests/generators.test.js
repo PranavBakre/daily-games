@@ -52,15 +52,26 @@ function checkTango(puzzle) {
   expect(countTango(puzzle)).toBe(1);
 }
 
-function checkSudoku(puzzle) {
+function checkSudoku(puzzle, n = 9, [boxRows, boxCols] = [3, 3]) {
   const { solution, givens } = puzzle;
-  expect(solution.length).toBe(81);
-  expect(countSudoku(solution, 2)).toBe(1);
-  for (let i = 0; i < 81; i++) {
+  expect(puzzle.size).toBe(n);
+  expect(solution.length).toBe(n * n);
+  const digits = Array.from({ length: n }, (_, i) => i + 1);
+  const sorted = (cells) => cells.map((i) => solution[i]).sort((a, b) => a - b);
+  for (let k = 0; k < n; k++) {
+    expect(sorted(digits.map((_, c) => k * n + c))).toEqual(digits);
+    expect(sorted(digits.map((_, r) => r * n + k))).toEqual(digits);
+    const top = Math.floor(k / (n / boxCols)) * boxRows;
+    const left = (k % (n / boxCols)) * boxCols;
+    const box = [];
+    for (let r = 0; r < boxRows; r++) for (let c = 0; c < boxCols; c++) box.push((top + r) * n + left + c);
+    expect(sorted(box)).toEqual(digits);
+  }
+  for (let i = 0; i < n * n; i++) {
     if (givens[i]) expect(givens[i]).toBe(solution[i]);
   }
   expect(countSudoku(givens, 2)).toBe(1);
-  expect(puzzle.clues).toBeLessThanOrEqual(46);
+  expect(puzzle.clues).toBeLessThanOrEqual(n === 9 ? 46 : 20);
 }
 
 describe('zip generator', () => {
@@ -114,6 +125,12 @@ describe('tango generator', () => {
 });
 
 describe('sudoku generator', () => {
+  test('produces unique, solvable 6x6 mini puzzles with 2x3 boxes', () => {
+    for (let seed = 0; seed < 10; seed++) {
+      checkSudoku(generateSudoku(`sudoku-test-mini-${seed}`, 'mini'), 6, [2, 3]);
+    }
+  });
+
   for (const difficulty of ['easy', 'medium', 'hard']) {
     test(`produces unique, solvable ${difficulty} puzzles`, () => {
       for (let seed = 0; seed < 3; seed++) {

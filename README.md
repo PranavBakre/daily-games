@@ -76,7 +76,8 @@ plus `=` / `×` edge badges, chosen one at a time until the search finds exactly
 one solution. Redundant badges are removed afterwards so the board stays
 readable.
 
-**Sudoku** — a complete grid is built from the classic pattern and then
+**Sudoku** — comes in 9×9 (Easy, Medium, Hard) and a 6×6 Mini with 2×3 boxes.
+A complete grid is built from the classic pattern and then
 permuted (digits, bands, rows, stacks, columns). Cells are removed in random
 order, one at a time, keeping a removal only when a bitmask solver with
 minimum-remaining-values pruning still finds a single solution.

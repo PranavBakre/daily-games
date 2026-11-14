@@ -1,10 +1,10 @@
-// Sudoku — classic 9x9. Puzzles are dug out of a random complete grid and every
-// one of them is checked for a single solution before it is used.
+// Sudoku — classic 9x9 with 3x3 boxes, or a 6x6 mini with 2x3 boxes. Puzzles
+// are dug out of a random complete grid and every one of them is checked for a
+// single solution before it is used.
 
 import { Rng } from '../rng.js';
 import { h, haptic } from '../ui.js';
 
-const ALL = 0x1ff;
 const BIT_VALUE = new Uint8Array(512);
 for (let k = 0; k < 9; k++) BIT_VALUE[1 << k] = k + 1;
 
@@ -12,30 +12,70 @@ const POPCOUNT = new Uint8Array(512);
 for (let i = 1; i < 512; i++) POPCOUNT[i] = POPCOUNT[i >> 1] + (i & 1);
 
 const DIFFICULTIES = {
-  easy: { label: 'Easy', clues: 40 },
-  medium: { label: 'Medium', clues: 32 },
-  hard: { label: 'Hard', clues: 26 },
+  mini: { label: 'Mini 6×6', size: 6, clues: 14 },
+  easy: { label: 'Easy', size: 9, clues: 40 },
+  medium: { label: 'Medium', size: 9, clues: 32 },
+  hard: { label: 'Hard', size: 9, clues: 26 },
 };
 
-function boxOf(index) {
-  const row = Math.floor(index / 9);
-  const col = index % 9;
-  return Math.floor(row / 3) * 3 + Math.floor(col / 3);
+const BOX_SHAPE = { 6: [2, 3], 9: [3, 3] };
+const layouts = new Map();
+
+/** Geometry for an n x n board: box shape, units and each cell's peers. */
+function layoutFor(n) {
+  if (layouts.has(n)) return layouts.get(n);
+  const [boxRows, boxCols] = BOX_SHAPE[n];
+  const cells = n * n;
+  const boxOf = new Uint8Array(cells);
+  const rows = [];
+  const cols = [];
+  const boxes = [];
+  for (let i = 0; i < n; i++) {
+    rows.push([]);
+    cols.push([]);
+    boxes.push([]);
+  }
+  for (let i = 0; i < cells; i++) {
+    const row = Math.floor(i / n);
+    const col = i % n;
+    boxOf[i] = Math.floor(row / boxRows) * (n / boxCols) + Math.floor(col / boxCols);
+    rows[row].push(i);
+    cols[col].push(i);
+    boxes[boxOf[i]].push(i);
+  }
+  const peers = Array.from({ length: cells }, (_, i) => {
+    const row = Math.floor(i / n);
+    const col = i % n;
+    return [...new Set([...rows[row], ...cols[col], ...boxes[boxOf[i]]])].filter((j) => j !== i);
+  });
+  const layout = {
+    n,
+    cells,
+    all: (1 << n) - 1,
+    boxRows,
+    boxCols,
+    boxOf,
+    units: [...rows, ...cols, ...boxes],
+    peers,
+  };
+  layouts.set(n, layout);
+  return layout;
 }
 
 export function countSolutions(grid, limit = 2) {
+  const { n, cells: total, all, boxOf } = layoutFor(Math.round(Math.sqrt(grid.length)));
   const cells = Uint8Array.from(grid, (value) => value | 0);
-  const rows = new Uint16Array(9);
-  const cols = new Uint16Array(9);
-  const boxes = new Uint16Array(9);
+  const rows = new Uint16Array(n);
+  const cols = new Uint16Array(n);
+  const boxes = new Uint16Array(n);
 
-  for (let i = 0; i < 81; i++) {
+  for (let i = 0; i < total; i++) {
     const value = cells[i];
     if (!value) continue;
     const bit = 1 << (value - 1);
-    const row = Math.floor(i / 9);
-    const col = i % 9;
-    const box = boxOf(i);
+    const row = Math.floor(i / n);
+    const col = i % n;
+    const box = boxOf[i];
     if ((rows[row] | cols[col] | boxes[box]) & bit) return 0;
     rows[row] |= bit;
     cols[col] |= bit;
@@ -47,13 +87,13 @@ export function countSolutions(grid, limit = 2) {
   function search() {
     let best = -1;
     let bestMask = 0;
-    let bestCount = 10;
+    let bestCount = n + 1;
 
-    for (let i = 0; i < 81; i++) {
+    for (let i = 0; i < total; i++) {
       if (cells[i]) continue;
-      const row = Math.floor(i / 9);
-      const col = i % 9;
-      const free = ~(rows[row] | cols[col] | boxes[boxOf(i)]) & ALL;
+      const row = Math.floor(i / n);
+      const col = i % n;
+      const free = ~(rows[row] | cols[col] | boxes[boxOf[i]]) & all;
       if (free === 0) return;
       const options = POPCOUNT[free];
       if (options < bestCount) {
@@ -69,9 +109,9 @@ export function countSolutions(grid, limit = 2) {
       return;
     }
 
-    const row = Math.floor(best / 9);
-    const col = best % 9;
-    const box = boxOf(best);
+    const row = Math.floor(best / n);
+    const col = best % n;
+    const box = boxOf[best];
     let mask = bestMask;
     while (mask) {
       const bit = mask & -mask;
@@ -94,22 +134,25 @@ export function countSolutions(grid, limit = 2) {
 }
 
 /** A random complete grid, built from the classic pattern then permuted. */
-function fullGrid(rng) {
-  const digits = rng.shuffle([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+function fullGrid(rng, n) {
+  const { boxRows, boxCols } = layoutFor(n);
+  const range = (k) => Array.from({ length: k }, (_, i) => i);
+  const digits = rng.shuffle(range(n).map((i) => i + 1));
   const rows = [];
-  for (const band of rng.shuffle([0, 1, 2])) {
-    for (const row of rng.shuffle([0, 1, 2])) rows.push(band * 3 + row);
+  for (const band of rng.shuffle(range(n / boxRows))) {
+    for (const row of rng.shuffle(range(boxRows))) rows.push(band * boxRows + row);
   }
   const cols = [];
-  for (const stack of rng.shuffle([0, 1, 2])) {
-    for (const col of rng.shuffle([0, 1, 2])) cols.push(stack * 3 + col);
+  for (const stack of rng.shuffle(range(n / boxCols))) {
+    for (const col of rng.shuffle(range(boxCols))) cols.push(stack * boxCols + col);
   }
 
-  const grid = new Array(81);
-  for (let r = 0; r < 9; r++) {
-    for (let c = 0; c < 9; c++) {
-      const pattern = (rows[r] * 3 + Math.floor(rows[r] / 3) + cols[c]) % 9;
-      grid[r * 9 + c] = digits[pattern];
+  const grid = new Array(n * n);
+  for (let r = 0; r < n; r++) {
+    for (let c = 0; c < n; c++) {
+      const source = rows[r];
+      const pattern = (boxCols * (source % boxRows) + Math.floor(source / boxRows) + cols[c]) % n;
+      grid[r * n + c] = digits[pattern];
     }
   }
   return grid;
@@ -117,14 +160,16 @@ function fullGrid(rng) {
 
 export function generateSudoku(seed, difficulty = 'medium') {
   const config = DIFFICULTIES[difficulty] ?? DIFFICULTIES.medium;
+  const n = config.size;
+  const cells = n * n;
 
   for (let attempt = 0; attempt < 8; attempt++) {
     const rng = new Rng(`${seed}|sudoku|${difficulty}|${attempt}`);
-    const solution = fullGrid(rng);
+    const solution = fullGrid(rng, n);
     const puzzle = solution.slice();
-    let clues = 81;
+    let clues = cells;
 
-    for (const index of rng.shuffle(Array.from({ length: 81 }, (_, i) => i))) {
+    for (const index of rng.shuffle(Array.from({ length: cells }, (_, i) => i))) {
       if (clues <= config.clues) break;
       const backup = puzzle[index];
       puzzle[index] = 0;
@@ -136,42 +181,16 @@ export function generateSudoku(seed, difficulty = 'medium') {
     }
 
     if (clues <= config.clues + 6) {
-      return { solution, givens: puzzle, clues, difficulty };
+      return { size: n, solution, givens: puzzle, clues, difficulty };
     }
   }
 
   throw new Error('sudoku: could not generate a puzzle');
 }
 
-function grouping() {
-  const rows = [];
-  const cols = [];
-  const boxes = [];
-  for (let i = 0; i < 9; i++) {
-    rows.push([]);
-    cols.push([]);
-    boxes.push([]);
-  }
-  for (let i = 0; i < 81; i++) {
-    const row = Math.floor(i / 9);
-    const col = i % 9;
-    rows[row].push(i);
-    cols[col].push(i);
-    boxes[boxOf(i)].push(i);
-  }
-  return { rows, cols, boxes };
-}
-
-const GROUPS = grouping();
-const PEERS = Array.from({ length: 81 }, (_, i) => {
-  const row = Math.floor(i / 9);
-  const col = i % 9;
-  return [...new Set([...GROUPS.rows[row], ...GROUPS.cols[col], ...GROUPS.boxes[boxOf(i)]])].filter((j) => j !== i);
-});
-
-function findConflicts(values) {
+function findConflicts(values, units) {
   const bad = new Set();
-  for (const group of [...GROUPS.rows, ...GROUPS.cols, ...GROUPS.boxes]) {
+  for (const group of units) {
     const seen = new Map();
     for (const index of group) {
       const value = values[index];
@@ -188,8 +207,10 @@ function findConflicts(values) {
 }
 
 export function createSudoku(host, { puzzle, saved, onChange, onSolve }) {
-  const values = new Array(81).fill(0);
-  const notes = new Array(81).fill(0);
+  const L = layoutFor(puzzle.size ?? 9);
+  const { n, cells: total, peers: PEERS } = L;
+  const values = new Array(total).fill(0);
+  const notes = new Array(total).fill(0);
   let selected = -1;
   let notesMode = false;
   let solved = false;
@@ -199,22 +220,22 @@ export function createSudoku(host, { puzzle, saved, onChange, onSolve }) {
   let flagged = -1;
   let doneUnits = null;
 
-  for (let i = 0; i < 81; i++) if (puzzle.givens[i]) values[i] = puzzle.givens[i];
+  for (let i = 0; i < total; i++) if (puzzle.givens[i]) values[i] = puzzle.givens[i];
 
-  if (saved && Array.isArray(saved.values) && saved.values.length === 81) {
-    for (let i = 0; i < 81; i++) {
+  if (saved && Array.isArray(saved.values) && saved.values.length === total) {
+    for (let i = 0; i < total; i++) {
       if (puzzle.givens[i]) continue;
       const value = saved.values[i];
-      if (Number.isInteger(value) && value >= 0 && value <= 9) values[i] = value;
+      if (Number.isInteger(value) && value >= 0 && value <= n) values[i] = value;
     }
-    if (Array.isArray(saved.notes) && saved.notes.length === 81) {
-      for (let i = 0; i < 81; i++) {
+    if (Array.isArray(saved.notes) && saved.notes.length === total) {
+      for (let i = 0; i < total; i++) {
         if (puzzle.givens[i]) continue;
         const mask = saved.notes[i];
-        if (Number.isInteger(mask) && mask >= 0 && mask <= ALL) notes[i] = mask;
+        if (Number.isInteger(mask) && mask >= 0 && mask <= L.all) notes[i] = mask;
       }
     }
-    if (Number.isInteger(saved.selected) && saved.selected >= 0 && saved.selected < 81) {
+    if (Number.isInteger(saved.selected) && saved.selected >= 0 && saved.selected < total) {
       selected = saved.selected;
     }
     if (typeof saved.notesMode === 'boolean') notesMode = saved.notesMode;
@@ -224,28 +245,28 @@ export function createSudoku(host, { puzzle, saved, onChange, onSolve }) {
     }
   }
 
-  const board = h('div', { class: 'sudoku-board' });
+  const board = h('div', { class: `sudoku-board size-${n}`, style: { '--n': n } });
   const grid = h('div', { class: 'sudoku-grid' });
   const cellNodes = [];
   const valueNodes = [];
   const noteNodes = [];
 
-  for (let i = 0; i < 81; i++) {
-    const row = Math.floor(i / 9);
-    const col = i % 9;
+  for (let i = 0; i < total; i++) {
+    const row = Math.floor(i / n);
+    const col = i % n;
     const valueNode = h('span', { class: 'sd-value' });
     const noteNode = h('span', { class: 'sd-notes' });
     const noteCells = [];
-    for (let d = 1; d <= 9; d++) {
+    for (let d = 1; d <= n; d++) {
       const note = h('span', { class: 'sd-note' });
       noteCells.push(note);
       noteNode.append(note);
     }
     const cell = h('div', { class: 'sd-cell', dataset: { i: String(i) } }, noteNode, valueNode);
-    if (col % 3 === 2 && col !== 8) cell.classList.add('box-right');
-    if (row % 3 === 2 && row !== 8) cell.classList.add('box-bottom');
-    if (col === 8) cell.classList.add('last-col');
-    if (row === 8) cell.classList.add('last-row');
+    if (col % L.boxCols === L.boxCols - 1 && col !== n - 1) cell.classList.add('box-right');
+    if (row % L.boxRows === L.boxRows - 1 && row !== n - 1) cell.classList.add('box-bottom');
+    if (col === n - 1) cell.classList.add('last-col');
+    if (row === n - 1) cell.classList.add('last-row');
     cellNodes.push(cell);
     valueNodes.push(valueNode);
     noteNodes.push(noteCells);
@@ -253,9 +274,9 @@ export function createSudoku(host, { puzzle, saved, onChange, onSolve }) {
   }
   board.append(grid);
 
-  const numpad = h('div', { class: 'numpad' });
+  const numpad = h('div', { class: 'numpad', style: { '--n': n } });
   const padButtons = [];
-  for (let d = 1; d <= 9; d++) {
+  for (let d = 1; d <= n; d++) {
     const button = h(
       'button',
       {
@@ -317,7 +338,7 @@ export function createSudoku(host, { puzzle, saved, onChange, onSolve }) {
   }
 
   function conflicts() {
-    return findConflicts(values);
+    return findConflicts(values, L.units);
   }
 
   function refresh() {
@@ -325,7 +346,7 @@ export function createSudoku(host, { puzzle, saved, onChange, onSolve }) {
     const selectedValue = selected >= 0 ? values[selected] : 0;
     const peerSet = selected >= 0 ? new Set(PEERS[selected]) : new Set();
 
-    for (let i = 0; i < 81; i++) {
+    for (let i = 0; i < total; i++) {
       const cell = cellNodes[i];
       const value = values[i];
       const isGiven = puzzle.givens[i] !== 0;
@@ -340,29 +361,29 @@ export function createSudoku(host, { puzzle, saved, onChange, onSolve }) {
 
       valueNodes[i].textContent = value ? String(value) : '';
       const noteMask = value ? 0 : notes[i];
-      for (let d = 1; d <= 9; d++) {
+      for (let d = 1; d <= n; d++) {
         noteNodes[i][d - 1].textContent = noteMask & (1 << (d - 1)) ? String(d) : '';
       }
     }
 
-    for (let d = 1; d <= 9; d++) {
+    for (let d = 1; d <= n; d++) {
       let used = 0;
-      for (let i = 0; i < 81; i++) if (values[i] === d) used++;
+      for (let i = 0; i < total; i++) if (values[i] === d) used++;
       const button = padButtons[d - 1];
-      button.classList.toggle('complete', used >= 9);
-      button.querySelector('.pad-left').textContent = used >= 9 ? '' : String(9 - used);
+      button.classList.toggle('complete', used >= n);
+      button.querySelector('.pad-left').textContent = used >= n ? '' : String(n - used);
     }
 
     const filled = values.filter((value) => value !== 0).length;
     hint.textContent = message || (bad.size > 0
       ? 'That digit repeats in a row, column or box.'
-      : `${filled} of 81 cells filled`);
+      : `${filled} of ${total} cells filled`);
 
     markCompletedUnits();
 
     onChange();
 
-    if (!solved && filled === 81 && bad.size === 0) {
+    if (!solved && filled === total && bad.size === 0) {
       solved = true;
       board.classList.add('solved');
       haptic([12, 40, 12]);
@@ -371,7 +392,7 @@ export function createSudoku(host, { puzzle, saved, onChange, onSolve }) {
   }
 
   function markCompletedUnits() {
-    const units = [...GROUPS.rows, ...GROUPS.cols, ...GROUPS.boxes];
+    const { units } = L;
     const now = new Set();
     units.forEach((unit, u) => {
       if (unit.every((i) => values[i] === puzzle.solution[i])) now.add(u);
@@ -379,7 +400,7 @@ export function createSudoku(host, { puzzle, saved, onChange, onSolve }) {
 
     const doneCells = new Set();
     for (const u of now) for (const i of units[u]) doneCells.add(i);
-    for (let i = 0; i < 81; i++) cellNodes[i].classList.toggle('done', doneCells.has(i));
+    for (let i = 0; i < total; i++) cellNodes[i].classList.toggle('done', doneCells.has(i));
 
     // The first pass only records state, so a restored board does not replay sweeps.
     if (doneUnits) {
@@ -401,7 +422,7 @@ export function createSudoku(host, { puzzle, saved, onChange, onSolve }) {
     let mask = 0;
     for (const peer of PEERS[index]) if (values[peer]) mask |= 1 << (values[peer] - 1);
     let count = 0;
-    for (let d = 0; d < 9; d++) if (!(mask & (1 << d))) count++;
+    for (let d = 0; d < n; d++) if (!(mask & (1 << d))) count++;
     return count;
   }
 
@@ -421,8 +442,8 @@ export function createSudoku(host, { puzzle, saved, onChange, onSolve }) {
 
     let target = selected >= 0 && values[selected] === 0 ? selected : -1;
     if (target === -1) {
-      let fewest = 10;
-      for (let i = 0; i < 81; i++) {
+      let fewest = n + 1;
+      for (let i = 0; i < total; i++) {
         if (values[i]) continue;
         const count = candidateCount(i);
         if (count < fewest) {
@@ -496,7 +517,7 @@ export function createSudoku(host, { puzzle, saved, onChange, onSolve }) {
 
   function onKeyDown(event) {
     if (event.metaKey || event.ctrlKey || event.altKey) return;
-    if (event.key >= '1' && event.key <= '9') {
+    if (event.key >= '1' && event.key <= String(n)) {
       place(Number(event.key));
       event.preventDefault();
       return;
@@ -511,18 +532,12 @@ export function createSudoku(host, { puzzle, saved, onChange, onSolve }) {
       event.preventDefault();
       return;
     }
-    const moves = { ArrowUp: -9, ArrowDown: 9, ArrowLeft: -1, ArrowRight: 1 };
+    const moves = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] };
     const delta = moves[event.key];
     if (delta) {
-      const row = Math.floor(selected / 9);
-      const col = selected % 9;
-      let nextRow = row;
-      let nextCol = col;
-      if (delta === -9) nextRow = (row + 8) % 9;
-      if (delta === 9) nextRow = (row + 1) % 9;
-      if (delta === -1) nextCol = (col + 8) % 9;
-      if (delta === 1) nextCol = (col + 1) % 9;
-      select(nextRow * 9 + nextCol);
+      const row = (Math.floor(selected / n) + delta[0] + n) % n;
+      const col = ((selected % n) + delta[1] + n) % n;
+      select(row * n + col);
       event.preventDefault();
     }
   }
@@ -555,7 +570,7 @@ export const sudoku = {
   generate: generateSudoku,
   create: createSudoku,
   rules: [
-    'Fill the grid so every row, column and 3×3 box holds the digits 1–9 exactly once.',
+    'Fill the grid so every row, column and box holds each digit exactly once: 1–9 in a 3×3 box, or 1–6 in a 2×3 box on Mini.',
     'Tap a cell, then a number to fill it.',
     'Notes lets you pencil in small candidates instead of a final digit.',
     'Hint points out a wrong digit, or fills one cell for you.',
