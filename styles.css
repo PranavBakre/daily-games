@@ -565,18 +565,36 @@ ol {
   place-items: center;
 }
 
-.zip-num {
-  position: relative;
-  z-index: 2;
-  font-size: clamp(14px, 4.3vw, 21px);
-  font-weight: 700;
-  color: #a9bdd6;
-  font-variant-numeric: tabular-nums;
-  text-shadow: 0 1px 5px rgba(0, 0, 0, 0.6);
-  transition: color 0.15s ease;
+.zip-fill {
+  position: absolute;
+  inset: 0;
+  background: var(--accent-soft);
+  opacity: 0;
+  transition: opacity 0.12s ease;
 }
-.zip-num.reached {
-  color: #ffffff;
+.zip-cell.on .zip-fill {
+  opacity: 1;
+}
+
+.zip-numbers {
+  pointer-events: none;
+}
+.zip-badge {
+  width: 58%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #eef3fb;
+  color: #0b1118;
+  font-size: clamp(14px, 4.2vw, 20px);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.zip-badge.reached {
+  box-shadow: 0 0 0 3px var(--accent), 0 2px 8px rgba(0, 0, 0, 0.45);
 }
 
 .zip-svg {
@@ -588,7 +606,7 @@ ol {
 }
 
 .zip-gridlines {
-  stroke: rgba(255, 255, 255, 0.055);
+  stroke: rgba(255, 255, 255, 0.09);
   stroke-width: 2;
   fill: none;
 }
@@ -596,7 +614,7 @@ ol {
 .zip-line {
   fill: none;
   stroke: var(--accent);
-  stroke-width: 50;
+  stroke-width: 38;
   stroke-linecap: round;
   stroke-linejoin: round;
   filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.45));
@@ -604,15 +622,9 @@ ol {
 }
 
 .zip-walls line {
-  stroke: #060a10;
-  stroke-width: 14;
+  stroke: #eef3fb;
+  stroke-width: 10;
   stroke-linecap: round;
-}
-
-.zip-start {
-  fill: var(--accent);
-  stroke: rgba(255, 255, 255, 0.75);
-  stroke-width: 3;
 }
 
 .zip-board.solved .zip-line {

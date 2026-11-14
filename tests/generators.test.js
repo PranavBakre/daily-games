@@ -28,14 +28,13 @@ function checkZip(puzzle) {
     expect(wallSet.has(edgeId(from, to))).toBe(false);
   }
 
-  const position = new Map(solution.map((cell, index) => [cell, index]));
   const labels = numbers.filter((value) => value !== 0);
   expect(labels.length).toBeGreaterThanOrEqual(3);
-  expect(numbers.filter((value) => value === 1).length).toBe(1);
-  for (let cell = 0; cell < size; cell++) {
-    if (numbers[cell] === 0) continue;
-    expect(position.get(cell) + 1).toBe(numbers[cell]);
-  }
+  const inPathOrder = solution.map((cell) => numbers[cell]).filter((value) => value !== 0);
+  expect(inPathOrder).toEqual(labels.map((_, i) => i + 1));
+  expect(numbers[solution[0]]).toBe(1);
+  expect(numbers[solution[size - 1]]).toBe(labels.length);
+  expect(walls.length).toBeLessThanOrEqual(6);
 
   expect(countZip(puzzle, { limit: 2, budget: 2000000 }).count).toBe(1);
 }
@@ -151,4 +150,55 @@ describe('sudoku generator', () => {
     const perPuzzle = (performance.now() - started) / 3;
     expect(perPuzzle).toBeLessThan(2500);
   });
+});
+
+function bruteZip({ width, height, numbers, walls }) {
+  const size = width * height;
+  const table = neighbours(width, height);
+  const wallSet = new Set(walls.map(([a, b]) => edgeId(a, b)));
+  const last = Math.max(...numbers);
+  const start = numbers.indexOf(1);
+  const visited = new Uint8Array(size);
+  let count = 0;
+  function walk(cell, depth, next) {
+    if (depth === size - 1) {
+      if (numbers[cell] === last) count++;
+      return;
+    }
+    for (const n of table[cell]) {
+      if (visited[n] || wallSet.has(edgeId(cell, n))) continue;
+      if (numbers[n] && numbers[n] !== next) continue;
+      visited[n] = 1;
+      walk(n, depth + 1, numbers[n] ? next + 1 : next);
+      visited[n] = 0;
+    }
+  }
+  visited[start] = 1;
+  walk(start, 0, 2);
+  return count;
+}
+
+test('zip solver agrees with brute force on small boards', () => {
+  let nonZero = 0;
+  for (let seed = 0; seed < 60; seed++) {
+    const width = 4 + (seed % 2);
+    const height = 4;
+    const size = width * height;
+    const cells = Array.from({ length: size }, (_, i) => i);
+    let state = seed * 7919 + 13;
+    const rand = () => (state = (state * 1103515245 + 12345) % 2147483648) / 2147483648;
+    cells.sort(() => rand() - 0.5);
+    const numbers = new Array(size).fill(0);
+    const clues = 2 + (seed % 5 === 0 ? 1 : 0);
+    cells.slice(0, clues).forEach((cell, i) => (numbers[cell] = i + 1));
+    const walls = [];
+    for (let a = 0; a < size; a++) {
+      for (const b of neighbours(width, height)[a]) if (a < b && rand() < 0.06) walls.push([a, b]);
+    }
+    const puzzle = { width, height, numbers, walls };
+    const fast = countZip(puzzle, { limit: 1000000, budget: 1e9 }).count;
+    expect(fast).toBe(bruteZip(puzzle));
+    if (fast) nonZero++;
+  }
+  expect(nonZero).toBeGreaterThan(10);
 });

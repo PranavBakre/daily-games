@@ -62,11 +62,13 @@ cache-first with a background refresh.)
 ## How the levels are made
 
 **Zip** — a random [Hamiltonian path](https://en.wikipedia.org/wiki/Hamiltonian_path)
-is walked over the grid with a most-constrained-neighbour heuristic. Every
-adjacency the path does not use starts as a wall, which makes the solution
-unique by construction. Walls are then removed one at a time, keeping each
-removal only if a depth-first search still counts exactly one solution. A few
-cells along the path are exposed as numbered checkpoints.
+is walked over the grid with a most-constrained-neighbour heuristic, and cells
+along it are numbered 1 … N, starting and ending on the path's ends. While a
+solver still finds a second route, the generator adds a number where that route
+breaks away (or, now and then, a wall across it). Clues the solution does not
+need are then removed, so most boards read as numbers with a few walls at most.
+The solver prunes dead-end cells and disconnected regions, and a test checks it
+against brute force.
 
 **Tango** — a full 6×6 board is filled by backtracking with row/column balance
 and "no three in a row" pruning. Clues are then added: a handful of given cells
