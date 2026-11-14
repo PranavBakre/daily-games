@@ -455,6 +455,7 @@ function saveProgress(state) {
 function finish(state) {
   if (state.solved) return;
   state.solved = true;
+  state.hints = state.controller?.getState().hints ?? 0;
   pauseClock(state);
   const ms = Math.max(1000, elapsed(state));
   paintTimer(state);
@@ -487,7 +488,7 @@ function showWinSheet(state, ms) {
     h(
       'p',
       { class: 'win-meta' },
-      `${game.name} · ${labelForDifficulty(game, difficulty)}${mode === 'daily' ? ` · ${streak.count} day streak` : ''}`,
+      `${game.name} · ${labelForDifficulty(game, difficulty)}${mode === 'daily' ? ` · ${streak.count} day streak` : ''}${state.hints ? ` · ${state.hints} hint${state.hints === 1 ? '' : 's'}` : ''}`,
     ),
     best && best < ms
       ? h('p', { class: 'win-best' }, `Your best: ${formatTime(best)}`)

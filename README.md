@@ -12,6 +12,9 @@ CSS and JavaScript. No framework, no build step, no accounts, no network calls.
   app opens with no connection at all — nothing is fetched to play.
 - **Installable.** It is a valid PWA, so you can add it to your home screen on
   iOS or Android and it runs full screen.
+- **Hints.** Each game has a Hint button. It points out a wrong cell if there is
+  one; otherwise it fills a cell (Zip draws the next few steps). The win sheet
+  shows how many hints you used.
 - **Local progress.** Times, streaks and unfinished boards live in
   `localStorage`. Nothing leaves the browser.
 

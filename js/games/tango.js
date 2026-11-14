@@ -238,12 +238,20 @@ export function createTango(host, { puzzle, saved, onChange, onSolve }) {
   const size = puzzle.size ?? SIZE;
   const values = new Array(size * size).fill(0);
   let solved = false;
+  let hints = 0;
+  const hinted = new Set();
+  let message = '';
+  let flagged = -1;
 
   if (saved && Array.isArray(saved.values) && saved.values.length === size * size) {
     for (let i = 0; i < values.length; i++) {
       const value = saved.values[i];
       if (puzzle.givens[i]) continue;
       if (value === SUN || value === MOON) values[i] = value;
+    }
+    if (Number.isInteger(saved.hints) && saved.hints > 0) hints = saved.hints;
+    if (Array.isArray(saved.hinted)) {
+      for (const i of saved.hinted) if (Number.isInteger(i) && values[i] === puzzle.solution[i]) hinted.add(i);
     }
   }
 
@@ -304,11 +312,14 @@ export function createTango(host, { puzzle, saved, onChange, onSolve }) {
       type: 'button',
       onclick: () => {
         if (solved) return;
-        for (let i = 0; i < values.length; i++) if (!puzzle.givens[i]) values[i] = 0;
+        for (let i = 0; i < values.length; i++) if (!puzzle.givens[i] && !hinted.has(i)) values[i] = 0;
+        message = '';
+        flagged = -1;
         refresh();
         haptic();
       },
     }, 'Clear'),
+    h('button', { class: 'btn ghost', type: 'button', onclick: () => giveHint() }, 'Hint'),
   );
 
   const legend = h('p', { class: 'stage-legend' }, 'Tap a cell: sun → moon → empty');
@@ -331,12 +342,16 @@ export function createTango(host, { puzzle, saved, onChange, onSolve }) {
     for (let i = 0; i < values.length; i++) renderCell(i);
 
     const bad = findConflicts(values, puzzle.edges, size);
-    for (let i = 0; i < values.length; i++) cellNodes[i].classList.toggle('bad', bad.has(i));
+    for (let i = 0; i < values.length; i++) {
+      cellNodes[i].classList.toggle('bad', bad.has(i));
+      cellNodes[i].classList.toggle('hinted', hinted.has(i));
+      cellNodes[i].classList.toggle('flagged', i === flagged);
+    }
 
     const filled = values.filter((value) => value !== 0).length;
-    hint.textContent = bad.size > 0
+    hint.textContent = message || (bad.size > 0
       ? 'Something clashes — check the highlighted cells.'
-      : `${filled} of ${values.length} cells`;
+      : `${filled} of ${values.length} cells`);
 
     onChange();
 
@@ -348,12 +363,59 @@ export function createTango(host, { puzzle, saved, onChange, onSolve }) {
     }
   }
 
+  function filledAround(index) {
+    const row = Math.floor(index / size);
+    const col = index % size;
+    let score = 0;
+    if (row > 0 && values[index - size]) score++;
+    if (row < size - 1 && values[index + size]) score++;
+    if (col > 0 && values[index - 1]) score++;
+    if (col < size - 1 && values[index + 1]) score++;
+    for (const edge of puzzle.edges) if (edge.a === index || edge.b === index) score++;
+    return score;
+  }
+
+  function giveHint() {
+    if (solved) return;
+    hints++;
+
+    const wrong = values.findIndex((value, i) => value !== 0 && value !== puzzle.solution[i]);
+    if (wrong !== -1) {
+      flagged = wrong;
+      message = 'This cell is wrong. Tap it to change it.';
+      haptic([10, 30, 10]);
+      refresh();
+      return;
+    }
+
+    let target = -1;
+    let best = -1;
+    for (let i = 0; i < values.length; i++) {
+      if (values[i]) continue;
+      const score = filledAround(i);
+      if (score > best) {
+        best = score;
+        target = i;
+      }
+    }
+    if (target === -1) return;
+
+    values[target] = puzzle.solution[target];
+    hinted.add(target);
+    flagged = -1;
+    message = `Hint: a ${values[target] === SUN ? 'sun' : 'moon'} goes in the marked cell.`;
+    haptic();
+    refresh();
+  }
+
   function onBoardClick(event) {
     if (solved) return;
     const cell = event.target.closest('.tango-cell');
     if (!cell) return;
     const index = Number(cell.dataset.i);
-    if (puzzle.givens[index]) return;
+    if (puzzle.givens[index] || hinted.has(index)) return;
+    message = '';
+    flagged = -1;
     values[index] = values[index] === 0 ? SUN : values[index] === SUN ? MOON : 0;
     haptic();
     refresh();
@@ -365,7 +427,7 @@ export function createTango(host, { puzzle, saved, onChange, onSolve }) {
 
   return {
     getState() {
-      return { values: values.slice() };
+      return { values: values.slice(), hints, hinted: [...hinted] };
     },
     destroy() {
       grid.removeEventListener('click', onBoardClick);
@@ -389,5 +451,6 @@ export const tango = {
     'No three of the same symbol may sit next to each other in a line.',
     'A badge between two cells must hold: = means the same symbol, ≠ means different.',
     'Tap a cell to cycle empty → sun → moon → empty.',
+    'Hint points out a wrong cell, or fills one for you.',
   ],
 };

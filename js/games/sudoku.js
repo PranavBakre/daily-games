@@ -193,6 +193,11 @@ export function createSudoku(host, { puzzle, saved, onChange, onSolve }) {
   let selected = -1;
   let notesMode = false;
   let solved = false;
+  let hints = 0;
+  const hinted = new Set();
+  let message = '';
+  let flagged = -1;
+  let doneUnits = null;
 
   for (let i = 0; i < 81; i++) if (puzzle.givens[i]) values[i] = puzzle.givens[i];
 
@@ -213,6 +218,10 @@ export function createSudoku(host, { puzzle, saved, onChange, onSolve }) {
       selected = saved.selected;
     }
     if (typeof saved.notesMode === 'boolean') notesMode = saved.notesMode;
+    if (Number.isInteger(saved.hints) && saved.hints > 0) hints = saved.hints;
+    if (Array.isArray(saved.hinted)) {
+      for (const i of saved.hinted) if (Number.isInteger(i) && values[i] === puzzle.solution[i]) hinted.add(i);
+    }
   }
 
   const board = h('div', { class: 'sudoku-board' });
@@ -285,7 +294,13 @@ export function createSudoku(host, { puzzle, saved, onChange, onSolve }) {
     'Erase',
   );
 
-  const tools = h('div', { class: 'sudoku-tools' }, notesButton, eraseButton);
+  const hintButton = h(
+    'button',
+    { class: 'btn ghost', type: 'button', onclick: () => giveHint() },
+    'Hint',
+  );
+
+  const tools = h('div', { class: 'sudoku-tools' }, notesButton, eraseButton, hintButton);
   const hint = h('p', { class: 'stage-hint' });
 
   host.append(board, numpad, tools, hint);
@@ -320,6 +335,8 @@ export function createSudoku(host, { puzzle, saved, onChange, onSolve }) {
       cell.classList.toggle('peer', peerSet.has(i));
       cell.classList.toggle('same', value !== 0 && value === selectedValue && i !== selected);
       cell.classList.toggle('bad', bad.has(i));
+      cell.classList.toggle('hinted', hinted.has(i));
+      cell.classList.toggle('flagged', i === flagged);
 
       valueNodes[i].textContent = value ? String(value) : '';
       const noteMask = value ? 0 : notes[i];
@@ -337,9 +354,11 @@ export function createSudoku(host, { puzzle, saved, onChange, onSolve }) {
     }
 
     const filled = values.filter((value) => value !== 0).length;
-    hint.textContent = bad.size > 0
+    hint.textContent = message || (bad.size > 0
       ? 'That digit repeats in a row, column or box.'
-      : `${filled} of 81 cells filled`;
+      : `${filled} of 81 cells filled`);
+
+    markCompletedUnits();
 
     onChange();
 
@@ -351,14 +370,96 @@ export function createSudoku(host, { puzzle, saved, onChange, onSolve }) {
     }
   }
 
+  function markCompletedUnits() {
+    const units = [...GROUPS.rows, ...GROUPS.cols, ...GROUPS.boxes];
+    const now = new Set();
+    units.forEach((unit, u) => {
+      if (unit.every((i) => values[i] === puzzle.solution[i])) now.add(u);
+    });
+
+    const doneCells = new Set();
+    for (const u of now) for (const i of units[u]) doneCells.add(i);
+    for (let i = 0; i < 81; i++) cellNodes[i].classList.toggle('done', doneCells.has(i));
+
+    // The first pass only records state, so a restored board does not replay sweeps.
+    if (doneUnits) {
+      for (const u of now) {
+        if (doneUnits.has(u)) continue;
+        units[u].forEach((i, k) => {
+          const cell = cellNodes[i];
+          cell.classList.remove('sweep');
+          void cell.offsetWidth;
+          cell.style.animationDelay = `${k * 40}ms`;
+          cell.classList.add('sweep');
+        });
+      }
+    }
+    doneUnits = now;
+  }
+
+  function candidateCount(index) {
+    let mask = 0;
+    for (const peer of PEERS[index]) if (values[peer]) mask |= 1 << (values[peer] - 1);
+    let count = 0;
+    for (let d = 0; d < 9; d++) if (!(mask & (1 << d))) count++;
+    return count;
+  }
+
+  function giveHint() {
+    if (solved) return;
+    hints++;
+
+    const wrong = values.findIndex((value, i) => value !== 0 && value !== puzzle.solution[i]);
+    if (wrong !== -1) {
+      selected = wrong;
+      flagged = wrong;
+      message = 'This cell is wrong. Erase it and try again.';
+      haptic([10, 30, 10]);
+      refresh();
+      return;
+    }
+
+    let target = selected >= 0 && values[selected] === 0 ? selected : -1;
+    if (target === -1) {
+      let fewest = 10;
+      for (let i = 0; i < 81; i++) {
+        if (values[i]) continue;
+        const count = candidateCount(i);
+        if (count < fewest) {
+          fewest = count;
+          target = i;
+        }
+      }
+    }
+    if (target === -1) return;
+
+    const digit = puzzle.solution[target];
+    values[target] = digit;
+    notes[target] = 0;
+    for (const peer of PEERS[target]) notes[peer] &= ~(1 << (digit - 1));
+    hinted.add(target);
+    selected = target;
+    flagged = -1;
+    message = `Hint: a ${digit} goes here.`;
+    haptic();
+    refresh();
+  }
+
+  function clearMessage() {
+    message = '';
+    flagged = -1;
+  }
+
   function select(index) {
+    clearMessage();
     selected = index;
     refresh();
     onChange();
   }
 
   function place(digit) {
-    if (solved || selected < 0 || puzzle.givens[selected]) return;
+    if (solved || selected < 0 || puzzle.givens[selected] || hinted.has(selected)) return;
+    clearMessage();
 
     if (notesMode) {
       if (values[selected]) return;
@@ -379,7 +480,8 @@ export function createSudoku(host, { puzzle, saved, onChange, onSolve }) {
   }
 
   function erase() {
-    if (solved || selected < 0 || puzzle.givens[selected]) return;
+    if (solved || selected < 0 || puzzle.givens[selected] || hinted.has(selected)) return;
+    clearMessage();
     values[selected] = 0;
     notes[selected] = 0;
     haptic();
@@ -432,7 +534,7 @@ export function createSudoku(host, { puzzle, saved, onChange, onSolve }) {
 
   return {
     getState() {
-      return { values: values.slice(), notes: notes.slice(), selected, notesMode };
+      return { values: values.slice(), notes: notes.slice(), selected, notesMode, hints, hinted: [...hinted] };
     },
     destroy() {
       grid.removeEventListener('click', onBoardClick);
@@ -456,5 +558,6 @@ export const sudoku = {
     'Fill the grid so every row, column and 3×3 box holds the digits 1–9 exactly once.',
     'Tap a cell, then a number to fill it.',
     'Notes lets you pencil in small candidates instead of a final digit.',
+    'Hint points out a wrong digit, or fills one cell for you.',
   ],
 };

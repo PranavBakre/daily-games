@@ -674,6 +674,12 @@ ol {
   filter: drop-shadow(0 0 8px rgba(143, 184, 255, 0.25));
 }
 
+.tango-cell.hinted .tango-tile {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+.tango-cell.flagged .tango-tile {
+  box-shadow: inset 0 0 0 2px var(--bad);
+}
 .tango-cell.bad .tango-tile {
   background: rgba(255, 123, 123, 0.14);
   box-shadow: inset 0 0 0 1px rgba(255, 123, 123, 0.55);
@@ -750,6 +756,29 @@ ol {
   border-bottom: 0;
 }
 
+.sd-cell.done {
+  background: rgba(61, 220, 151, 0.07);
+}
+.sd-cell.done .sd-value {
+  color: #9fe6c4;
+}
+.sd-cell.given.done .sd-value {
+  color: #d8f7e8;
+}
+.sd-cell.sweep {
+  animation: sd-sweep 0.7s ease-out both;
+}
+@keyframes sd-sweep {
+  0% {
+    background: rgba(61, 220, 151, 0);
+  }
+  30% {
+    background: rgba(61, 220, 151, 0.38);
+  }
+  100% {
+    background: rgba(61, 220, 151, 0.07);
+  }
+}
 .sd-cell.peer {
   background: rgba(255, 255, 255, 0.032);
 }
@@ -765,6 +794,13 @@ ol {
 }
 .sd-cell.bad .sd-value {
   color: var(--bad);
+}
+
+.sd-cell.hinted .sd-value {
+  color: var(--accent);
+}
+.sd-cell.flagged {
+  box-shadow: inset 0 0 0 2px var(--bad);
 }
 
 .sd-value {

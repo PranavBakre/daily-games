@@ -251,6 +251,8 @@ export function createZip(host, { puzzle, saved, onChange, onSolve }) {
   let path = [];
   let solved = false;
   let dragPointer = null;
+  let hints = 0;
+  let message = '';
 
   const board = h('div', {
     class: 'zip-board',
@@ -314,6 +316,7 @@ export function createZip(host, { puzzle, saved, onChange, onSolve }) {
         onclick: () => {
           if (solved) return;
           path = path.slice(0, -1);
+          message = '';
           haptic();
           refresh();
         },
@@ -328,12 +331,14 @@ export function createZip(host, { puzzle, saved, onChange, onSolve }) {
         onclick: () => {
           if (solved) return;
           path = [];
+          message = '';
           haptic();
           refresh();
         },
       },
       'Clear',
     ),
+    h('button', { class: 'btn ghost', type: 'button', onclick: () => giveHint() }, 'Hint'),
   );
 
   host.append(board, hint, controls);
@@ -394,7 +399,7 @@ export function createZip(host, { puzzle, saved, onChange, onSolve }) {
 
     hint.textContent = solved
       ? 'Solved'
-      : `${path.length} of ${size} cells`;
+      : message || `${path.length} of ${size} cells`;
 
     onChange();
 
@@ -406,6 +411,27 @@ export function createZip(host, { puzzle, saved, onChange, onSolve }) {
     }
   }
 
+  const HINT_STEPS = 3;
+
+  function giveHint() {
+    if (solved) return;
+    hints++;
+    const { solution } = puzzle;
+    let correct = 0;
+    while (correct < path.length && path[correct] === solution[correct]) correct++;
+
+    if (correct < path.length) {
+      path = solution.slice(0, Math.max(1, correct));
+      message = 'Your line went off track here. Keep going from the end.';
+      haptic([10, 30, 10]);
+    } else {
+      path = solution.slice(0, Math.min(size, correct + HINT_STEPS));
+      message = 'Hint: the line continues like this.';
+      haptic();
+    }
+    refresh();
+  }
+
   function cellAt(clientX, clientY) {
     const node = document.elementFromPoint(clientX, clientY);
     const cell = node?.closest?.('.zip-cell');
@@ -415,6 +441,7 @@ export function createZip(host, { puzzle, saved, onChange, onSolve }) {
 
   function apply(index) {
     if (index < 0 || solved) return false;
+    message = '';
     if (path.includes(index)) {
       const at = path.indexOf(index);
       if (at === path.length - 1) return false;
@@ -470,6 +497,7 @@ export function createZip(host, { puzzle, saved, onChange, onSolve }) {
   board.addEventListener('contextmenu', (event) => event.preventDefault());
 
   // Restore a saved path, dropping anything that does not validate.
+  if (saved && Number.isInteger(saved.hints) && saved.hints > 0) hints = saved.hints;
   if (saved && Array.isArray(saved.path)) {
     for (const index of saved.path) {
       if (!Number.isInteger(index) || index < 0 || index >= size) break;
@@ -481,7 +509,7 @@ export function createZip(host, { puzzle, saved, onChange, onSolve }) {
 
   return {
     getState() {
-      return { path: path.slice() };
+      return { path: path.slice(), hints };
     },
     destroy() {
       board.removeEventListener('pointerdown', onPointerDown);
@@ -509,5 +537,6 @@ export const zip = {
     'The line must pass through every cell exactly once.',
     'Visit the numbers in order: 1, 2, 3 … up to the last one.',
     'Dark bars between cells are walls — the line cannot cross them.',
+    'Hint backs your line up to its last correct cell, or draws the next few.',
   ],
 };
