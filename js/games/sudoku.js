@@ -565,7 +565,7 @@ export const sudoku = {
   tagline: 'Nine by nine, every day',
   accent: 'sky',
   icon: 'sudoku',
-  defaultDifficulty: 'medium',
+  defaultDifficulty: 'mini',
   difficulties: Object.entries(DIFFICULTIES).map(([id, config]) => ({ id, label: config.label })),
   generate: generateSudoku,
   create: createSudoku,
