@@ -1,0 +1,12 @@
+{
+  "name": "daily-games",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Zip, Tango and Sudoku — generated on device, playable offline.",
+  "type": "module",
+  "scripts": {
+    "test": "bun test",
+    "serve": "python3 -m http.server 4173",
+    "icons": "node tools/make-icons.mjs"
+  }
+}
