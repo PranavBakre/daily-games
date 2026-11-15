@@ -562,17 +562,15 @@ export function createSudoku(host, { puzzle, saved, onChange, onSolve }) {
 export const sudoku = {
   id: 'sudoku',
   name: 'Sudoku',
-  tagline: 'Nine by nine, every day',
-  accent: 'sky',
+  tagline: 'Fill every row, column and box.',
   icon: 'sudoku',
   defaultDifficulty: 'mini',
   difficulties: Object.entries(DIFFICULTIES).map(([id, config]) => ({ id, label: config.label })),
   generate: generateSudoku,
   create: createSudoku,
   rules: [
-    'Fill the grid so every row, column and box holds each digit exactly once: 1–9 in a 3×3 box, or 1–6 in a 2×3 box on Mini.',
-    'Tap a cell, then a number to fill it.',
-    'Notes lets you pencil in small candidates instead of a final digit.',
-    'Hint points out a wrong digit, or fills one cell for you.',
+    'Fill every row, column and box with each number once.',
+    'Tap a cell, then a number. Notes pencils in candidates.',
+    'Hint points out a wrong number, or fills one cell for you.',
   ],
 };

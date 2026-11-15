@@ -47,10 +47,6 @@ export function formatTime(ms) {
   return `${minutes}:${String(seconds).padStart(2, '0')}`;
 }
 
-export function formatDate(date = new Date()) {
-  return date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
-}
-
 export function haptic(pattern = 8) {
   if (navigator.vibrate) {
     try {
@@ -90,17 +86,10 @@ export function openSheet(content, { dismissable = true } = {}) {
 }
 
 const ICONS = {
-  zip: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 20v-7.5A2.5 2.5 0 0 1 9.5 10h5A2.5 2.5 0 0 0 17 7.5V4"/><circle cx="7" cy="20" r="1.7" fill="currentColor" stroke="none"/><circle cx="17" cy="4" r="1.7" fill="currentColor" stroke="none"/></svg>`,
-  tango: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8.5" cy="8.5" r="3.2"/><path d="M8.5 3v1M8.5 13v1M3 8.5h1M13 8.5h1M4.6 4.6l.8.8M11.6 11.6l.8.8M12.4 4.6l-.8.8"/><path d="M21 15.5a5 5 0 1 1-4.6-6.3 5.6 5.6 0 0 0 4.6 6.3Z"/></svg>`,
-  sudoku: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3.5" y="3.5" width="17" height="17" rx="2.5"/><path d="M9.2 3.5v17M14.8 3.5v17M3.5 9.2h17M3.5 14.8h17"/></svg>`,
+  zip: `<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="5" width="38" height="38" fill="#fff"/><path d="M17.7 5v38M30.3 5v38M5 17.7h38M5 30.3h38" stroke-width="1"/><path d="M11.3 36.7V24h12.7v-12.7h12.7v25.4" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/><circle cx="11.3" cy="36.7" r="4.6" fill="currentColor" stroke="none"/><circle cx="36.7" cy="36.7" r="4.6" fill="currentColor" stroke="none"/></svg>`,
+  tango: `<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="5" width="38" height="38" fill="#fff"/><path d="M24 5v38M5 24h38" stroke-width="1"/><circle cx="14.5" cy="14.5" r="4" fill="currentColor" stroke="none"/><path d="M14.5 7.5v1.6M14.5 19.9v1.6M7.5 14.5h1.6M19.9 14.5h1.6" stroke-width="1.8" stroke-linecap="round"/><circle cx="33.5" cy="33.5" r="4" fill="currentColor" stroke="none"/><path d="M33.5 26.5v1.6M33.5 38.9v1.6M26.5 33.5h1.6M38.9 33.5h1.6" stroke-width="1.8" stroke-linecap="round"/><path d="M38.2 16.2a5.4 5.4 0 1 1-5.1-6.9 4.4 4.4 0 0 0 5.1 6.9Z" fill="currentColor" stroke="none"/><path d="M19.2 35.2a5.4 5.4 0 1 1-5.1-6.9 4.4 4.4 0 0 0 5.1 6.9Z" fill="currentColor" stroke="none"/></svg>`,
+  sudoku: `<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="5" width="38" height="38" fill="#fff"/><path d="M17.7 5v38M30.3 5v38M5 17.7h38M5 30.3h38" stroke-width="1"/><g fill="currentColor" stroke="none" font-family="Georgia, serif" font-weight="700" font-size="10" text-anchor="middle"><text x="11.3" y="15">4</text><text x="36.7" y="15">1</text><text x="24" y="27.6">6</text><text x="11.3" y="40.2">2</text><text x="36.7" y="40.2">5</text></g></svg>`,
   back: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5.5 8 12l6.5 6.5"/></svg>`,
-  undo: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 8H5V5"/><path d="M5.2 8.2A8 8 0 1 1 4 13"/></svg>`,
-  reset: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>`,
-  help: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.2a2.5 2.5 0 1 1 3.4 2.4c-.8.3-1 .9-1 1.7v.3"/><circle cx="12" cy="17" r=".9" fill="currentColor" stroke="none"/></svg>`,
-  pencil: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19.5 8.5a2.1 2.1 0 0 0-3-3L5 17v3Z"/></svg>`,
-  eraser: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 20h11"/><path d="M15.5 4.5 4.8 15.2a2.1 2.1 0 0 0 0 3l1.6 1.6a2.1 2.1 0 0 0 3 0L20 9.2a2.1 2.1 0 0 0 0-3l-1.6-1.7a2.1 2.1 0 0 0-3 0Z"/></svg>`,
-  plus: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>`,
-  flame: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.6 2.2c.2 3-1.2 4.4-2.6 5.9C8.2 10 7 11.4 7 14a5 5 0 0 0 10 0c0-1.6-.6-2.8-1.4-4.1-.5.9-1.1 1.5-1.9 1.9.6-3.4-.4-7.2-1.1-9.6Z"/></svg>`,
   check: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.5 9.5 17.5 19.5 6.5"/></svg>`,
   install: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v10"/><path d="M8 10.5 12 14.5 16 10.5"/><path d="M5 17.5v1.5a1.5 1.5 0 0 0 1.5 1.5h11a1.5 1.5 0 0 0 1.5-1.5v-1.5"/></svg>`,
 };

@@ -89,6 +89,7 @@ reloaded practice board, and the tests all agree.
 ## Project layout
 
 ```
+DESIGN.md             art direction: type, colour, layout rules
 index.html            app shell
 styles.css            all styling
 js/app.js             routing, timer, daily/practice sessions, storage wiring

@@ -1,4 +1,4 @@
-import { h, formatTime, formatDate, haptic, icon, openSheet } from './ui.js';
+import { h, formatTime, haptic, icon, openSheet } from './ui.js';
 import { store, dateKey } from './storage.js';
 import { randomSeed } from './rng.js';
 import { zip } from './games/zip.js';
@@ -70,18 +70,26 @@ function practiceHash(game, difficulty = game.defaultDifficulty, seed = randomSe
 
 // ---------------------------------------------------------------- hub
 
+const FIRST_DAY = new Date(2026, 10, 14);
+
+function puzzleNumber(date = new Date()) {
+  const day = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  return Math.max(1, Math.round((day - FIRST_DAY) / 86400000) + 1);
+}
+
+function liveStreak(game) {
+  const streak = store.streak(game.id);
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  return streak.last === dateKey() || streak.last === dateKey(yesterday) ? streak.count : 0;
+}
+
 function statusLine(game) {
   const result = store.result(game.id, dateKey());
-  const streak = store.streak(game.id);
-  const solved = store.solvedCount(game.id);
-  const parts = [];
-  if (result) {
-    parts.push(`Solved in ${formatTime(result.ms)}`);
-  } else {
-    parts.push("Today's puzzle is waiting");
-  }
-  if (streak.count > 1) parts.push(`${streak.count}-day streak`);
-  else if (!result && solved > 0) parts.push(`${solved} solved`);
+  const streak = liveStreak(game);
+  const parts = [`No. ${puzzleNumber()} · ${labelForDifficulty(game, game.defaultDifficulty)}`];
+  if (result) parts.push(formatTime(result.ms));
+  if (streak > 1) parts.push(`${streak}-day streak`);
   return parts.join(' · ');
 }
 
@@ -102,14 +110,15 @@ function gameCard(game) {
       'span',
       { class: 'game-text' },
       h('span', { class: 'game-name' }, game.name),
-      h('span', { class: 'game-sub' }, statusLine(game)),
-    ),
-    h(
-      'span',
-      { class: 'game-tail' },
-      done
-        ? h('span', { class: 'done-dot', title: 'Solved today' }, icon('check'))
-        : h('span', { class: 'go-dot' }, '›'),
+      h('span', { class: 'game-sub' }, game.tagline),
+      h(
+        'span',
+        { class: 'game-row' },
+        h('span', { class: 'game-status' }, statusLine(game)),
+        done
+          ? h('span', { class: 'play-pill done' }, icon('check', 'icon small'), 'Solved')
+          : h('span', { class: 'play-pill' }, 'Play'),
+      ),
     ),
   );
 
@@ -123,13 +132,13 @@ function gameCard(game) {
         location.hash = practiceHash(game);
       },
     },
-    'Practice',
+    'Practice with a new puzzle',
   );
 
-  return h('div', { class: `game-card accent-${game.accent}` }, main, practice);
+  return h('article', { class: `game-card accent-${game.id}` }, main, practice);
 }
 
-function currentStreakTotal() {
+function solvedTodayCount() {
   return GAMES.reduce((total, game) => total + (store.solvedToday(game.id) ? 1 : 0), 0);
 }
 
@@ -138,7 +147,7 @@ function renderInstallButton() {
   return h(
     'button',
     {
-      class: 'btn ghost install-btn',
+      class: 'btn install-btn',
       type: 'button',
       onclick: async () => {
         if (!installPrompt) return;
@@ -153,34 +162,32 @@ function renderInstallButton() {
   );
 }
 
-function weekStrip() {
+function lastSevenDays() {
   const days = [];
   for (let offset = 6; offset >= 0; offset--) {
     const date = new Date();
     date.setDate(date.getDate() - offset);
     days.push({ key: dateKey(date), date, today: offset === 0 });
   }
+  return days;
+}
 
+function weekGrid(games) {
   return h(
-    'section',
-    { class: 'week', 'aria-label': 'Last seven days' },
-    h('p', { class: 'eyebrow' }, 'Last 7 days'),
-    h(
-      'div',
-      { class: 'week-grid' },
-      days.map(({ key, date, today }) =>
+    'div',
+    { class: 'week-grid' },
+    lastSevenDays().map(({ key, date, today }) =>
+      h(
+        'div',
+        { class: `week-day${today ? ' today' : ''}` },
+        h('span', { class: 'week-label' }, date.toLocaleDateString(undefined, { weekday: 'narrow' })),
         h(
           'div',
-          { class: `week-day${today ? ' today' : ''}` },
-          h(
-            'div',
-            { class: 'week-dots' },
-            GAMES.map((game) => h('span', {
-              class: `week-dot${store.result(game.id, key) ? ' on' : ''}`,
-              title: `${game.name}: ${store.result(game.id, key) ? 'solved' : 'not solved'}`,
-            })),
-          ),
-          h('span', { class: 'week-label' }, date.toLocaleDateString(undefined, { weekday: 'narrow' })),
+          { class: 'week-dots' },
+          games.map((game) => h('span', {
+            class: `week-dot accent-${game.id}${store.result(game.id, key) ? ' on' : ''}`,
+            title: `${game.name}: ${store.result(game.id, key) ? 'solved' : 'not solved'}`,
+          })),
         ),
       ),
     ),
@@ -189,11 +196,11 @@ function weekStrip() {
 
 function showHub() {
   destroySession();
-  const today = dateKey();
-  const done = currentStreakTotal();
+  const done = solvedTodayCount();
   const standalone = window.matchMedia?.('(display-mode: standalone)').matches
     || window.navigator.standalone === true;
   const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const today = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
 
   const screen = h(
     'div',
@@ -201,31 +208,34 @@ function showHub() {
     h(
       'header',
       { class: 'hub-head' },
-      h('p', { class: 'eyebrow' }, formatDate()),
-      h('h1', {}, 'Daily Games'),
-      h(
-        'p',
-        { class: 'lede' },
-        done === 3
-          ? 'All three done. Come back tomorrow for a fresh set.'
-          : 'Three small puzzles, generated fresh every day. Works offline.',
-      ),
+      h('h1', { class: 'masthead' }, 'Daily Games'),
+      h('p', { class: 'dateline' }, `${today} · No. ${puzzleNumber()}`),
     ),
-    h('div', { class: 'cards' }, GAMES.map(gameCard)),
-    weekStrip(),
     h(
-      'div',
+      'section',
+      { class: 'cards', 'aria-label': "Today's puzzles" },
+      h('h2', { class: 'section-title' }, done === GAMES.length ? 'All solved. Back tomorrow.' : "Today's puzzles"),
+      GAMES.map(gameCard),
+    ),
+    h(
+      'section',
+      { class: 'week', 'aria-label': 'This week' },
+      h('h2', { class: 'section-title' }, 'This week'),
+      weekGrid(GAMES),
+    ),
+    h(
+      'footer',
       { class: 'hub-foot' },
       h(
         'div',
         { class: 'hub-foot-row' },
-        h('span', { class: 'muted' }, `${done}/3 today · ${today}`),
+        h('span', {}, `${done} of ${GAMES.length} solved today`),
         renderInstallButton(),
       ),
       !standalone && isIos
-        ? h('p', { class: 'muted tiny' }, 'On iPhone: Share → Add to Home Screen to install.')
+        ? h('p', { class: 'muted tiny' }, 'To install on iPhone, tap Share, then Add to Home Screen.')
         : null,
-      h('p', { class: 'muted tiny' }, 'Puzzles are generated on your device. Progress stays in this browser.'),
+      h('p', { class: 'muted tiny' }, 'Works offline. Your progress stays on this device.'),
     ),
   );
 
@@ -292,15 +302,18 @@ function openGame(game, { mode, difficulty, seed }) {
   const timerNode = h('div', { class: 'timer', text: '0:00' });
   const stage = h('div', { class: 'stage' }, h('div', { class: 'stage-loading' }, 'Generating a puzzle…'));
 
-  const rulesButton = h(
-    'button',
-    {
-      class: 'btn ghost rules-btn',
-      type: 'button',
-      onclick: () => showRules(game),
-    },
-    icon('help', 'icon small'),
-    'How to play',
+  const seenKey = `dg-howto-${game.id}`;
+  const firstVisit = localStorage.getItem(seenKey) === null;
+  try {
+    localStorage.setItem(seenKey, '1');
+  } catch {
+    /* storage full or blocked */
+  }
+  const howTo = h(
+    'details',
+    { class: 'howto', open: firstVisit },
+    h('summary', {}, 'How to play'),
+    h('ol', {}, game.rules.map((rule) => h('li', {}, rule))),
   );
 
   const head = h(
@@ -323,14 +336,14 @@ function openGame(game, { mode, difficulty, seed }) {
       'div',
       { class: 'game-title' },
       h('h1', {}, game.name),
-      h('span', { class: 'game-meta' }, `${mode === 'daily' ? 'Daily' : 'Practice'} · ${labelForDifficulty(game, difficulty)}`),
+      h('span', { class: 'game-meta' }, `${mode === 'daily' ? `No. ${puzzleNumber()}` : 'Practice'} · ${labelForDifficulty(game, difficulty)}`),
     ),
     timerNode,
   );
 
   const screen = h(
     'div',
-    { class: `screen game accent-${game.accent}` },
+    { class: `screen game accent-${game.id}` },
     head,
     h('div', { class: 'game-subbar' }, modeSwitch(game, mode), mode === 'practice' ? difficultyChips(game, difficulty) : null),
     result
@@ -338,16 +351,16 @@ function openGame(game, { mode, difficulty, seed }) {
           'div',
           { class: 'solved-banner' },
           h('span', { class: 'solved-banner-icon' }, icon('check', 'icon small')),
-          `Solved today in ${formatTime(result.ms)} — playing again won't change the record.`,
+          `Solved today in ${formatTime(result.ms)}. Playing again won't change your time.`,
         )
       : null,
+    howTo,
     stage,
-    h(
-      'div',
-      { class: 'game-foot' },
-      rulesButton,
-      mode === 'practice'
-        ? h(
+    mode === 'practice'
+      ? h(
+          'div',
+          { class: 'game-foot' },
+          h(
             'button',
             {
               class: 'btn primary',
@@ -357,11 +370,10 @@ function openGame(game, { mode, difficulty, seed }) {
                 location.hash = practiceHash(game, difficulty);
               },
             },
-            icon('plus', 'icon small'),
             'New puzzle',
-          )
-        : null,
-    ),
+          ),
+        )
+      : null,
   );
 
   app.replaceChildren(screen);
@@ -471,86 +483,48 @@ function finish(state) {
 
 function showWinSheet(state, ms) {
   const { game, mode, difficulty } = state;
-  const streak = store.streak(game.id);
   const best = store.best(game.id, difficulty);
+  const hints = state.hints ? ` · ${state.hints} hint${state.hints === 1 ? '' : 's'}` : '';
 
   const nextPractice = () => {
     close();
     location.hash = practiceHash(game, difficulty);
   };
+  const backToGames = () => {
+    close();
+    location.hash = '';
+  };
+
+  const stat = (value, label) => h('div', { class: 'win-stat' }, h('strong', {}, value), h('span', {}, label));
 
   const sheet = h(
     'div',
-    { class: `sheet win accent-${game.accent}` },
-    h('div', { class: 'win-mark' }, icon('check')),
-    h('h2', {}, 'Solved'),
+    { class: `sheet win accent-${game.id}` },
+    h('p', { class: 'win-kicker' }, `${game.name} · ${mode === 'daily' ? `No. ${puzzleNumber()}` : 'Practice'} · ${labelForDifficulty(game, difficulty)}${hints}`),
+    h('h2', {}, 'Solved.'),
     h('p', { class: 'win-time' }, formatTime(ms)),
+    h('p', { class: 'win-best' }, best === ms ? 'New personal best' : best ? `Your best: ${formatTime(best)}` : ''),
     h(
-      'p',
-      { class: 'win-meta' },
-      `${game.name} · ${labelForDifficulty(game, difficulty)}${mode === 'daily' ? ` · ${streak.count} day streak` : ''}${state.hints ? ` · ${state.hints} hint${state.hints === 1 ? '' : 's'}` : ''}`,
+      'div',
+      { class: 'win-stats' },
+      stat(String(store.solvedCount(game.id)), 'Played'),
+      stat(String(liveStreak(game)), 'Day streak'),
+      stat(best ? formatTime(best) : '—', 'Best'),
     ),
-    best && best < ms
-      ? h('p', { class: 'win-best' }, `Your best: ${formatTime(best)}`)
-      : h('p', { class: 'win-best' }, best === ms ? 'New personal best' : ''),
+    weekGrid([game]),
     h(
       'div',
       { class: 'sheet-actions' },
       mode === 'practice'
-        ? h(
-            'button',
-            { class: 'btn primary', type: 'button', 'data-autofocus': '', onclick: nextPractice },
-            'New puzzle',
-          )
-        : h(
-            'button',
-            {
-              class: 'btn primary',
-              type: 'button',
-              'data-autofocus': '',
-              onclick: () => {
-                close();
-                location.hash = '';
-              },
-            },
-            'Back to games',
-          ),
+        ? h('button', { class: 'btn primary', type: 'button', 'data-autofocus': '', onclick: nextPractice }, 'New puzzle')
+        : h('button', { class: 'btn primary', type: 'button', 'data-autofocus': '', onclick: backToGames }, 'Back to games'),
       mode === 'practice'
-        ? h(
-            'button',
-            {
-              class: 'btn ghost',
-              type: 'button',
-              onclick: () => {
-                close();
-                location.hash = '';
-              },
-            },
-            'Back to games',
-          )
-        : h('button', { class: 'btn ghost', type: 'button', onclick: nextPractice }, 'Play another'),
+        ? h('button', { class: 'btn', type: 'button', onclick: backToGames }, 'Back to games')
+        : h('button', { class: 'btn', type: 'button', onclick: nextPractice }, 'Practice another'),
     ),
   );
 
   const close = openSheet(sheet, { dismissable: false });
-}
-
-function showRules(game) {
-  const close = openSheet(
-    h(
-      'div',
-      { class: `sheet rules accent-${game.accent}` },
-      h('p', { class: 'eyebrow' }, 'How to play'),
-      h('h2', {}, game.name),
-      h('p', { class: 'rules-tagline' }, game.tagline),
-      h('ol', { class: 'rules-list' }, game.rules.map((rule) => h('li', {}, rule))),
-      h(
-        'button',
-        { class: 'btn primary', type: 'button', 'data-autofocus': '', onclick: () => close() },
-        'Got it',
-      ),
-    ),
-  );
 }
 
 function destroySession() {

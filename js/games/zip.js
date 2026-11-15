@@ -608,19 +608,15 @@ export function createZip(host, { puzzle, saved, onChange, onSolve }) {
 export const zip = {
   id: 'zip',
   name: 'Zip',
-  tagline: 'One line through every cell',
-  accent: 'violet',
+  tagline: 'Draw one line through every cell.',
   icon: 'zip',
   defaultDifficulty: 'medium',
   difficulties: Object.entries(DIFFICULTIES).map(([id, config]) => ({ id, label: config.label })),
   generate: generateZip,
   create: createZip,
   rules: [
-    'Start on 1 and draw a single line that ends on the highest number.',
-    'The line must pass through every cell exactly once.',
-    'Visit the numbers in order: 1, 2, 3 …',
-    'Drag back over the line to undo part of it.',
-    'Dark bars between cells are walls — the line cannot cross them.',
-    'Hint backs your line up to its last correct cell, or draws the next few.',
+    'Draw one line from 1 to the highest number, through every cell once.',
+    'Pass the numbers in order. Walls block the line.',
+    'Drag back over the line to undo. Hint shows the next few cells.',
   ],
 };

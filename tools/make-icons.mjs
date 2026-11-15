@@ -48,14 +48,11 @@ function pathDistance(x, y) {
   return best;
 }
 
-const gradient = (x, y) => {
-  const t = Math.min(1, Math.max(0, (x + y) / 2));
-  return [
-    0.6 + (0.29 - 0.6) * t,
-    0.49 + (0.48 - 0.49) * t,
-    1 + (0.96 - 1) * t,
-  ];
-};
+// Colours match the tokens in styles.css: paper, line, ink and the Zip accent.
+const PAPER = [0.969, 0.957, 0.925];
+const LINE = [0.851, 0.827, 0.773];
+const INK = [0.071, 0.071, 0.071];
+const ZIP = [0.988, 0.545, 0.369];
 
 function blend(color, rgb, alpha) {
   color[0] = color[0] * (1 - alpha) + rgb[0] * alpha;
@@ -68,23 +65,23 @@ function sample(x, y, maskable) {
     return [0, 0, 0, 0];
   }
 
-  const color = gradient(x, y);
+  const color = PAPER.slice();
   const k = maskable ? 0.74 : 1;
   const u = (x - 0.5) / k + 0.5;
   const v = (y - 0.5) / k + 0.5;
 
   for (const [cx, cy] of DOTS) {
     if (sdRoundRect(u, v, cx, cy, 0.072, 0.072, 0.026) <= 0) {
-      blend(color, [1, 1, 1], 0.18);
+      blend(color, LINE, 1);
     }
   }
 
   if (pathDistance(u, v) <= 0.043) {
-    blend(color, [1, 1, 1], 1);
+    blend(color, INK, 1);
   }
 
   if (Math.hypot(u - 0.245, v - 0.755) <= 0.056) {
-    blend(color, [1, 0.82, 0.4], 1);
+    blend(color, ZIP, 1);
   }
 
   return [color[0], color[1], color[2], 1];

@@ -439,18 +439,15 @@ export function createTango(host, { puzzle, saved, onChange, onSolve }) {
 export const tango = {
   id: 'tango',
   name: 'Tango',
-  tagline: 'Suns, moons and balance',
-  accent: 'amber',
+  tagline: 'Fill the grid with suns and moons.',
   icon: 'tango',
   defaultDifficulty: 'medium',
   difficulties: Object.entries(DIFFICULTIES).map(([id, config]) => ({ id, label: config.label })),
   generate: generateTango,
   create: createTango,
   rules: [
-    'Each row and each column must hold three suns and three moons.',
-    'No three of the same symbol may sit next to each other in a line.',
-    'A badge between two cells must hold: = means the same symbol, ≠ means different.',
-    'Tap a cell to cycle empty → sun → moon → empty.',
-    'Hint points out a wrong cell, or fills one for you.',
+    'Each row and column holds three suns and three moons.',
+    'No more than two of the same symbol side by side.',
+    'Cells joined by = match; cells joined by × differ.',
   ],
 };
