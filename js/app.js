@@ -195,7 +195,7 @@ function weekGrid(games) {
   );
 }
 
-function showHub() {
+function showHub({ resetScroll = true } = {}) {
   destroySession();
   const done = solvedTodayCount();
   const standalone = window.matchMedia?.('(display-mode: standalone)').matches
@@ -241,7 +241,7 @@ function showHub() {
   );
 
   app.replaceChildren(screen);
-  window.scrollTo({ top: 0 });
+  if (resetScroll) window.scrollTo({ top: 0 });
   document.title = 'Daily Games';
 }
 
@@ -581,12 +581,13 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
   });
 }
 
-try {
-  const { merge } = await import('./games/merge.js');
-  GAMES.push(merge);
-} catch (error) {
-  // A returning offline client may still have the old service worker cache.
-  console.warn('[app] Number Merge is unavailable', error);
-}
-
 route();
+
+// An older offline cache may be missing this module during the upgrade.
+import('./games/merge.js').then(({ merge }) => {
+  GAMES.push(merge);
+  if (parseRoute()?.game === merge) route();
+  else if (!session) showHub({ resetScroll: false });
+}, (error) => {
+  console.warn('[app] Number Merge is unavailable', error);
+});
