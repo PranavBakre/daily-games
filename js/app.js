@@ -6,6 +6,7 @@ import { tango } from './games/tango.js';
 import { sudoku } from './games/sudoku.js';
 
 const GAMES = [zip, tango, sudoku];
+
 const app = document.getElementById('app');
 
 let session = null;
@@ -194,7 +195,7 @@ function weekGrid(games) {
   );
 }
 
-function showHub() {
+function showHub({ resetScroll = true } = {}) {
   destroySession();
   const done = solvedTodayCount();
   const standalone = window.matchMedia?.('(display-mode: standalone)').matches
@@ -240,7 +241,7 @@ function showHub() {
   );
 
   app.replaceChildren(screen);
-  window.scrollTo({ top: 0 });
+  if (resetScroll) window.scrollTo({ top: 0 });
   document.title = 'Daily Games';
 }
 
@@ -581,3 +582,12 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
 }
 
 route();
+
+// An older offline cache may be missing this module during the upgrade.
+import('./games/merge.js').then(({ merge }) => {
+  GAMES.push(merge);
+  if (parseRoute()?.game === merge) route();
+  else if (!session) showHub({ resetScroll: false });
+}, (error) => {
+  console.warn('[app] Number Merge is unavailable', error);
+});

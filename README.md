@@ -1,20 +1,21 @@
 # Daily Games
 
-Three small puzzles a day — **Zip**, **Tango** and **Sudoku** — in plain HTML,
+Four small puzzles a day — **Zip**, **Tango**, **Sudoku** and **Number Merge** — in plain HTML,
 CSS and JavaScript. No framework, no build step, no accounts, no network calls.
 
 - **Fresh puzzles forever.** Levels are generated on your device from a seeded
   random number generator. The daily set is pinned to the date, so it is the same
   puzzle all day; Practice generates a new one on demand.
-- **Every puzzle is unique.** Generators verify the solution count before the
-  board is shown. A puzzle with more than one answer never reaches the screen.
+- **Every board is solvable.** Zip, Tango and Sudoku check for a unique
+  solution. Number Merge builds each board backwards from a finished tile,
+  and you can solve it in more than one way.
 - **Offline.** A service worker caches the shell on first load. After that the
   app opens with no connection at all — nothing is fetched to play.
 - **Installable.** It is a valid PWA, so you can add it to your home screen on
   iOS or Android and it runs full screen.
-- **Hints.** Each game has a Hint button. It points out a wrong cell if there is
-  one; otherwise it fills a cell (Zip draws the next few steps). The win sheet
-  shows how many hints you used.
+- **Hints.** Each game has a Hint button. Zip draws the next few steps. Tango
+  and Sudoku flag a wrong cell or fill a cell. Number Merge selects a tile and
+  outlines its destination. The win sheet shows how many hints you used.
 - **Local progress.** Times, streaks and unfinished boards live in
   `localStorage`. Nothing leaves the browser.
 
@@ -32,15 +33,15 @@ Everything still generates offline; only the PWA install and cache need a server
 
 ## Tests
 
-The generators are the part worth testing, so they are covered directly:
+Run the puzzle generation and game rule tests locally:
 
 ```sh
 bun test
 ```
 
-Each test builds puzzles and asserts the invariants: the solution is a legal
-board, the hidden solution matches every clue, and a brute-force search finds
-exactly one solution. Run time is well under a second.
+The tests check that seeded boards are repeatable and solvable. They also
+check that Zip, Tango and Sudoku have unique solutions and that Number Merge
+only accepts equal tiles that share an edge.
 
 ## Deploy to GitHub Pages
 
