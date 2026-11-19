@@ -5,7 +5,9 @@ import { zip } from './games/zip.js';
 import { tango } from './games/tango.js';
 import { sudoku } from './games/sudoku.js';
 
-const GAMES = [zip, tango, sudoku];
+import { merge } from './games/merge.js';
+
+const GAMES = [zip, tango, sudoku, merge];
 const app = document.getElementById('app');
 
 let session = null;

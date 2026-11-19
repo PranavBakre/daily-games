@@ -28,6 +28,10 @@
   --sudoku-ink: #2f7d32;
   --sudoku-wash: #e3f2df;
 
+  --merge: #e2b9df;
+  --merge-ink: #70336c;
+  --merge-wash: #f5e5f4;
+
   --accent: var(--ink);
   --accent-ink: var(--ink);
   --accent-wash: var(--peer);
@@ -75,6 +79,12 @@
   --accent: var(--sudoku);
   --accent-ink: var(--sudoku-ink);
   --accent-wash: var(--sudoku-wash);
+}
+
+.accent-merge {
+  --accent: var(--merge);
+  --accent-ink: var(--merge-ink);
+  --accent-wash: var(--merge-wash);
 }
 
 * {
@@ -599,7 +609,8 @@ ol {
 /* Boards share one frame: white, ink outline, grey lines. */
 .zip-board,
 .tango-board,
-.sudoku-board {
+.sudoku-board,
+.merge-board {
   position: relative;
   width: 100%;
   background: var(--card);
@@ -1048,4 +1059,65 @@ ol {
     animation-duration: 0.001ms !important;
     transition-duration: 0.001ms !important;
   }
+}
+
+/* Number Merge */
+.game-tile .merge-icon {
+  display: grid;
+  place-items: center;
+  width: auto;
+  height: auto;
+  padding: var(--space-1);
+  border: var(--frame) solid var(--ink);
+  background: var(--card);
+  font: 700 var(--text-sm) var(--serif);
+  white-space: nowrap;
+}
+
+.merge-board {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  gap: var(--hairline);
+  background: var(--line);
+}
+
+.merge-tile {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  padding: 0;
+  border: 0;
+  background: var(--accent-wash);
+  color: var(--ink);
+  cursor: pointer;
+  font: 700 var(--text-xl) var(--serif);
+}
+
+.merge-tile:disabled {
+  background: var(--card);
+  cursor: default;
+}
+
+.merge-tile[aria-pressed='true'],
+.merge-tile.suggested {
+  background: var(--accent);
+  box-shadow: inset 0 0 0 var(--frame) var(--accent-ink);
+}
+
+.merge-tile:focus-visible {
+  outline: var(--frame) solid var(--ink);
+  outline-offset: calc(-1 * var(--space-1));
+}
+
+.merge-controls {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.merge-status {
+  min-height: var(--text-lg);
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+  text-align: center;
 }

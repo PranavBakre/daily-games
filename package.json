@@ -2,7 +2,7 @@
   "name": "daily-games",
   "version": "1.0.0",
   "private": true,
-  "description": "Zip, Tango and Sudoku — generated on device, playable offline.",
+  "description": "Zip, Tango, Sudoku and Number Merge — generated on device, playable offline.",
   "type": "module",
   "scripts": {
     "test": "bun test",

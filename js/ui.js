@@ -98,6 +98,11 @@ export function icon(name, className = 'icon') {
   const span = document.createElement('span');
   span.className = className;
   span.setAttribute('aria-hidden', 'true');
-  span.innerHTML = ICONS[name] ?? '';
+  if (name === 'merge') {
+    span.classList.add('merge-icon');
+    span.textContent = '2 + 2';
+  } else {
+    span.innerHTML = ICONS[name] ?? '';
+  }
   return span;
 }

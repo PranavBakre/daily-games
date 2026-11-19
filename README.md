@@ -1,13 +1,14 @@
 # Daily Games
 
-Three small puzzles a day — **Zip**, **Tango** and **Sudoku** — in plain HTML,
+Four small puzzles a day — **Zip**, **Tango**, **Sudoku** and **Number Merge** — in plain HTML,
 CSS and JavaScript. No framework, no build step, no accounts, no network calls.
 
 - **Fresh puzzles forever.** Levels are generated on your device from a seeded
   random number generator. The daily set is pinned to the date, so it is the same
   puzzle all day; Practice generates a new one on demand.
-- **Every puzzle is unique.** Generators verify the solution count before the
-  board is shown. A puzzle with more than one answer never reaches the screen.
+- **Every board is solvable.** Zip, Tango and Sudoku check for a unique
+  solution. Number Merge builds each board backwards from a finished tile,
+  and you can solve it in more than one way.
 - **Offline.** A service worker caches the shell on first load. After that the
   app opens with no connection at all — nothing is fetched to play.
 - **Installable.** It is a valid PWA, so you can add it to your home screen on
