@@ -22,6 +22,19 @@ export function mergeTiles(cells, size, from, to) {
   return next;
 }
 
+export function projectDrag(from, size, axis, delta, pitch) {
+  const direction = Math.sign(delta);
+  const neighbor = from + direction * (axis === 'x' ? 1 : size);
+  if (!neighbors(from, size).includes(neighbor)) return { x: 0, y: 0, to: null };
+
+  const distance = Math.min(Math.abs(delta), pitch);
+  return {
+    x: axis === 'x' ? direction * distance : 0,
+    y: axis === 'y' ? direction * distance : 0,
+    to: distance >= pitch / 2 ? neighbor : null,
+  };
+}
+
 export function isStuck(cells, size) {
   return cells.filter(Boolean).length > 1 && !cells.some((value, index) =>
     value && neighbors(index, size).some((neighbor) => cells[neighbor] === value),
@@ -165,17 +178,34 @@ function create(stage, { puzzle, saved, onChange, onSolve }) {
     if (solved || drag || event.button !== 0) return;
     event.preventDefault();
     board.setPointerCapture(event.pointerId);
-    drag = { from, pointerId: event.pointerId, x: event.clientX, y: event.clientY };
-    const tile = tiles[from];
-    tile.classList.add('dragging');
-    tile.style.pointerEvents = 'none';
+    drag = {
+      from,
+      pointerId: event.pointerId,
+      x: event.clientX,
+      y: event.clientY,
+      axis: null,
+      pitchX: tiles[1].offsetLeft - tiles[0].offsetLeft,
+      pitchY: tiles[size].offsetTop - tiles[0].offsetTop,
+    };
+    tiles[from].classList.add('dragging');
   }
 
   function moveDrag(event) {
     if (drag?.pointerId !== event.pointerId) return;
+    const { x, y } = dragPosition(event);
+    tiles[drag.from].style.transform = `translate(${x}px, ${y}px)`;
+  }
+
+  function dragPosition(event) {
     const x = event.clientX - drag.x;
     const y = event.clientY - drag.y;
-    tiles[drag.from].style.transform = `translate(${x}px, ${y}px)`;
+    if (!drag.axis) {
+      if (Math.max(Math.abs(x), Math.abs(y)) < 6) return { x: 0, y: 0, to: null };
+      drag.axis = Math.abs(x) >= Math.abs(y) ? 'x' : 'y';
+    }
+    return drag.axis === 'x'
+      ? projectDrag(drag.from, size, 'x', x, drag.pitchX)
+      : projectDrag(drag.from, size, 'y', y, drag.pitchY);
   }
 
   function cancelDrag(event) {
@@ -184,15 +214,14 @@ function create(stage, { puzzle, saved, onChange, onSolve }) {
     drag = null;
     tile.classList.remove('dragging');
     tile.style.removeProperty('transform');
-    tile.style.removeProperty('pointer-events');
   }
 
   function endDrag(event) {
     if (drag?.pointerId !== event.pointerId) return;
     const from = drag.from;
-    const to = tiles.indexOf(document.elementFromPoint(event.clientX, event.clientY));
+    const { to } = dragPosition(event);
     cancelDrag(event);
-    applyMerge(from, to);
+    if (to !== null) applyMerge(from, to);
   }
 
   stage.append(board, status, h('div', { class: 'merge-controls' }, undo, hint));

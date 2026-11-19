@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { findSolution, generate, isStuck, mergeTiles } from '../js/games/merge.js';
+import { findSolution, generate, isStuck, mergeTiles, projectDrag } from '../js/games/merge.js';
 
 test('merges equal edge neighbors into their sum and leaves other cells fixed', () => {
   const board = [2, 2, 4, 0, 2, 0, 2, 2, 0];
@@ -37,4 +37,13 @@ test('flags only unfinished boards with no legal merge', () => {
   expect(isStuck([2, 2, 0, 0], 2)).toBe(false);
   expect(isStuck([2, 0, 2, 0], 2)).toBe(false);
   expect(isStuck([0, 4, 0, 0], 2)).toBe(false);
+});
+
+test('projects a drag onto one axis and one neighboring cell', () => {
+  expect(projectDrag(5, 4, 'x', 500, 80)).toEqual({ x: 80, y: 0, to: 6 });
+  expect(projectDrag(5, 4, 'y', -500, 80)).toEqual({ x: 0, y: -80, to: 1 });
+  expect(projectDrag(5, 4, 'x', -39, 80)).toEqual({ x: -39, y: 0, to: null });
+  expect(projectDrag(5, 4, 'x', 40, 80)).toEqual({ x: 40, y: 0, to: 6 });
+  expect(projectDrag(7, 4, 'x', 500, 80)).toEqual({ x: 0, y: 0, to: null });
+  expect(projectDrag(1, 4, 'y', -500, 80)).toEqual({ x: 0, y: 0, to: null });
 });
