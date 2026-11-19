@@ -14,8 +14,8 @@ CSS and JavaScript. No framework, no build step, no accounts, no network calls.
 - **Installable.** It is a valid PWA, so you can add it to your home screen on
   iOS or Android and it runs full screen.
 - **Hints.** Each game has a Hint button. Zip draws the next few steps. Tango
-  and Sudoku flag a wrong cell or fill a cell. Number Merge selects a tile and
-  outlines its destination. The win sheet shows how many hints you used.
+  and Sudoku flag a wrong cell or fill a cell. Number Merge fills the tile to
+  drag and outlines its destination. The win sheet shows how many hints you used.
 - **Local progress.** Times, streaks and unfinished boards live in
   `localStorage`. Nothing leaves the browser.
 
