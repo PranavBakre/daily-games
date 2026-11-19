@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { findSolution, generate, mergeTiles } from '../js/games/merge.js';
+import { findSolution, generate, isStuck, mergeTiles } from '../js/games/merge.js';
 
 test('merges equal edge neighbors into their sum and leaves other cells fixed', () => {
   const board = [2, 2, 4, 0, 2, 0, 2, 2, 0];
@@ -29,4 +29,12 @@ test('generated boards are deterministic and hints lead to one tile', () => {
 test('hints distinguish a dead end from a completed board', () => {
   expect(findSolution([2, 0, 0, 2], 2)).toBeNull();
   expect(findSolution([0, 4, 0, 0], 2)).toEqual([]);
+});
+
+test('flags only unfinished boards with no legal merge', () => {
+  expect(isStuck([2, 0, 0, 2], 2)).toBe(true);
+  expect(isStuck([2, 4, 0, 0], 2)).toBe(true);
+  expect(isStuck([2, 2, 0, 0], 2)).toBe(false);
+  expect(isStuck([2, 0, 2, 0], 2)).toBe(false);
+  expect(isStuck([0, 4, 0, 0], 2)).toBe(false);
 });

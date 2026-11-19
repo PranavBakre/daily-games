@@ -1123,3 +1123,21 @@ ol {
   font-size: var(--text-sm);
   text-align: center;
 }
+
+.merge-tile:enabled {
+  cursor: grab;
+}
+
+.merge-tile.dragging {
+  position: relative;
+  z-index: 1;
+}
+
+.merge-board.stuck {
+  border-color: var(--bad);
+}
+
+.merge-board.stuck .merge-tile {
+  background: var(--bad-wash);
+  color: var(--bad);
+}
