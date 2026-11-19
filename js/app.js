@@ -5,9 +5,8 @@ import { zip } from './games/zip.js';
 import { tango } from './games/tango.js';
 import { sudoku } from './games/sudoku.js';
 
-import { merge } from './games/merge.js';
+const GAMES = [zip, tango, sudoku];
 
-const GAMES = [zip, tango, sudoku, merge];
 const app = document.getElementById('app');
 
 let session = null;
@@ -580,6 +579,14 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js').catch((error) => console.warn('[sw]', error));
   });
+}
+
+try {
+  const { merge } = await import('./games/merge.js');
+  GAMES.push(merge);
+} catch (error) {
+  // A returning offline client may still have the old service worker cache.
+  console.warn('[app] Number Merge is unavailable', error);
 }
 
 route();

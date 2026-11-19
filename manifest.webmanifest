@@ -1,5 +1,5 @@
 {
-  "name": "Daily Games — Zip, Tango & Sudoku",
+  "name": "Daily Games",
   "short_name": "Daily Games",
   "description": "Four small puzzles a day: Zip, Tango, Sudoku and Number Merge. Generated on your device and playable offline.",
   "start_url": "./",

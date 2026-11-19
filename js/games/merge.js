@@ -67,14 +67,14 @@ function create(stage, { puzzle, saved, onChange, onSolve }) {
   let history = saved?.history ?? [];
   let hints = saved?.hints ?? 0;
   let selected = null;
-  let suggested = [];
+  let destination = null;
   let solved = false;
 
   const status = h('div', { class: 'merge-status', role: 'status' });
   const undo = h('button', { class: 'btn', type: 'button', onclick: () => {
     cells = history.pop();
     selected = null;
-    suggested = [];
+    destination = null;
     paint('Move undone.');
     onChange();
   } }, 'Undo');
@@ -86,8 +86,8 @@ function create(stage, { puzzle, saved, onChange, onSolve }) {
     }
     hints++;
     selected = move[0];
-    suggested = move;
-    paint('Merge the highlighted tiles.');
+    destination = move[1];
+    paint(`Select the outlined ${cells[destination]} in row ${Math.floor(destination / size) + 1}, column ${destination % size + 1}.`);
     onChange();
   } }, 'Hint');
 
@@ -110,7 +110,7 @@ function create(stage, { puzzle, saved, onChange, onSolve }) {
       tile.disabled = !value;
       tile.setAttribute('aria-label', `${value || 'Empty'}, row ${Math.floor(index / size) + 1}, column ${index % size + 1}`);
       tile.setAttribute('aria-pressed', String(index === selected));
-      tile.classList.toggle('suggested', suggested.includes(index));
+      tile.classList.toggle('suggested', index === destination);
     }
     undo.disabled = solved || history.length === 0;
     hint.disabled = solved;
@@ -118,18 +118,18 @@ function create(stage, { puzzle, saved, onChange, onSolve }) {
   }
 
   function choose(index) {
-    if (solved) return;
+    if (solved || (destination !== null && index === selected)) return;
     const next = selected === null ? null : mergeTiles(cells, size, selected, index);
     if (!next) {
       selected = selected === index ? null : index;
-      suggested = [];
+      destination = null;
       paint();
       return;
     }
     history.push(cells);
     cells = next;
     selected = null;
-    suggested = [];
+    destination = null;
     solved = cells.filter(Boolean).length === 1;
     paint(solved ? 'One tile remains.' : '');
     haptic();
