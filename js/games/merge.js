@@ -101,6 +101,8 @@ function create(stage, { puzzle, saved, onChange, onSolve }) {
   const tiles = cells.map((_, index) => h('button', {
     class: 'merge-tile',
     type: 'button',
+    // Gesture handling must work even if an older stylesheet is cached.
+    style: { 'touch-action': 'none' },
     onpointerdown: (event) => startDrag(event, index),
     onclick: (event) => {
       if (event.detail === 0) choose(index);
@@ -164,7 +166,9 @@ function create(stage, { puzzle, saved, onChange, onSolve }) {
     event.preventDefault();
     board.setPointerCapture(event.pointerId);
     drag = { from, pointerId: event.pointerId, x: event.clientX, y: event.clientY };
-    tiles[from].classList.add('dragging');
+    const tile = tiles[from];
+    tile.classList.add('dragging');
+    tile.style.pointerEvents = 'none';
   }
 
   function moveDrag(event) {
@@ -180,6 +184,7 @@ function create(stage, { puzzle, saved, onChange, onSolve }) {
     drag = null;
     tile.classList.remove('dragging');
     tile.style.removeProperty('transform');
+    tile.style.removeProperty('pointer-events');
   }
 
   function endDrag(event) {

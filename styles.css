@@ -1126,13 +1126,11 @@ ol {
 
 .merge-tile:enabled {
   cursor: grab;
-  touch-action: none;
 }
 
 .merge-tile.dragging {
   position: relative;
   z-index: 1;
-  pointer-events: none;
 }
 
 .merge-board.stuck {
