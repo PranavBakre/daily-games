@@ -1,16 +1,14 @@
 import 'package:material_ui/material_ui.dart';
 
-void main() {
-  runApp(const MainApp());
-}
+import 'src/app.dart';
+import 'src/notifications.dart';
+import 'src/store.dart';
 
-class MainApp extends StatelessWidget {
-  const MainApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const MaterialApp(
-      home: Scaffold(body: Center(child: Text('Hello World!'))),
-    );
-  }
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final store = AppStore();
+  await store.load();
+  final reminders = Reminders();
+  await reminders.init();
+  runApp(DailyGamesApp(store: store, reminders: reminders));
 }
