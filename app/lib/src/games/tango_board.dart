@@ -28,9 +28,12 @@ class TangoBoard extends StatefulWidget {
 
 class _TangoBoardState extends State<TangoBoard> {
   static const _size = tangoSize;
+  static const _frameWidth = 2.0;
 
-  late final TangoPuzzle _puzzle =
-      generateTango(widget.seed, widget.difficulty);
+  late final TangoPuzzle _puzzle = generateTango(
+    widget.seed,
+    widget.difficulty,
+  );
   late List<int> _values;
   late Set<int> _hinted;
   int _hints = 0;
@@ -142,7 +145,8 @@ class _TangoBoardState extends State<TangoBoard> {
     var bestScore = -1;
     for (var i = 0; i < _values.length; i++) {
       if (_values[i] != 0) continue;
-      final score = _filledAround(i) +
+      final score =
+          _filledAround(i) +
           _puzzle.edges.where((edge) => edge.a == i || edge.b == i).length;
       if (score > bestScore) {
         bestScore = score;
@@ -175,8 +179,8 @@ class _TangoBoardState extends State<TangoBoard> {
     final status = _message.isNotEmpty
         ? _message
         : conflicts.isNotEmpty
-            ? 'Something clashes — check the highlighted cells.'
-            : '$filled of ${_values.length} cells';
+        ? 'Something clashes — check the highlighted cells.'
+        : '$filled of ${_values.length} cells';
 
     return Column(
       children: [
@@ -184,17 +188,17 @@ class _TangoBoardState extends State<TangoBoard> {
           aspectRatio: 1,
           child: LayoutBuilder(
             builder: (context, constraints) {
-              // The stack sits inside the 2 px frame, so badges are placed
-              // against the cells' own box, not the outer border.
+              // The stack sits inside the frame, so badges are placed against
+              // the cells' own box, not the outer border.
               final size = Size(
-                constraints.maxWidth - 4,
-                constraints.maxHeight - 4,
+                constraints.maxWidth - _frameWidth * 2,
+                constraints.maxHeight - _frameWidth * 2,
               );
               return Container(
                 key: const ValueKey('tango-board'),
                 decoration: BoxDecoration(
                   color: Palette.card,
-                  border: Border.all(color: Palette.ink, width: 2),
+                  border: Border.all(color: Palette.ink, width: _frameWidth),
                   borderRadius: BorderRadius.circular(Frame.cardRadius),
                 ),
                 clipBehavior: Clip.antiAlias,
@@ -270,12 +274,12 @@ class _TangoBoardState extends State<TangoBoard> {
     final background = _solved
         ? Palette.goodWash
         : conflicts.contains(index)
-            ? Palette.badWash
-            : _hinted.contains(index)
-                ? accent.wash
-                : given
-                    ? Palette.peer
-                    : Palette.card;
+        ? Palette.badWash
+        : _hinted.contains(index)
+        ? accent.wash
+        : given
+        ? Palette.peer
+        : Palette.card;
 
     return Pressable(
       onTap: () => _tap(index),
@@ -333,24 +337,28 @@ class _TangoBoardState extends State<TangoBoard> {
     final centerY = (horizontal ? row + 0.5 : row + 1) * cellHeight;
     final diameter = math.min(22.0, cellWidth * 0.36);
 
+    // The web badge is pointer-events: none; a badge must not eat the tap meant
+    // for the cells it separates.
     return Positioned(
       left: centerX - diameter / 2,
       top: centerY - diameter / 2,
       width: diameter,
       height: diameter,
-      child: Container(
-        key: ValueKey('tango-badge-${edge.a}-${edge.b}'),
-        decoration: BoxDecoration(
-          color: Palette.card,
-          shape: BoxShape.circle,
-          border: Border.all(color: Palette.ink, width: 1.5),
-        ),
-        alignment: Alignment.center,
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(
-            edge.same ? '=' : '×',
-            style: AppType.sans(14, weight: 700, height: 1),
+      child: IgnorePointer(
+        child: Container(
+          key: ValueKey('tango-badge-${edge.a}-${edge.b}'),
+          decoration: BoxDecoration(
+            color: Palette.card,
+            shape: BoxShape.circle,
+            border: Border.all(color: Palette.ink, width: 1.5),
+          ),
+          alignment: Alignment.center,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              edge.same ? '=' : '×',
+              style: AppType.sans(14, weight: 700, height: 1),
+            ),
           ),
         ),
       ),
@@ -397,10 +405,7 @@ class _TangoSymbolPainter extends CustomPainter {
           radius: 7.1 * unit,
         ),
       );
-    canvas.drawPath(
-      Path.combine(PathOperation.difference, outer, cut),
-      paint,
-    );
+    canvas.drawPath(Path.combine(PathOperation.difference, outer, cut), paint);
   }
 
   @override
