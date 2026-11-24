@@ -146,17 +146,27 @@ function chunk(type, data) {
   return Buffer.concat([length, body, crc]);
 }
 
-function encodePng(size, rgba) {
-  const raw = Buffer.alloc((size * 4 + 1) * size);
+function encodePng(size, rgba, { alpha = true } = {}) {
+  const channels = alpha ? 4 : 3;
+  const stride = size * channels + 1;
+  const raw = Buffer.alloc(stride * size);
   for (let y = 0; y < size; y++) {
-    raw[y * (size * 4 + 1)] = 0;
-    rgba.copy(raw, y * (size * 4 + 1) + 1, y * size * 4, (y + 1) * size * 4);
+    const row = y * stride;
+    raw[row] = 0;
+    for (let x = 0; x < size; x++) {
+      const from = (y * size + x) * 4;
+      const to = row + 1 + x * channels;
+      raw[to] = rgba[from];
+      raw[to + 1] = rgba[from + 1];
+      raw[to + 2] = rgba[from + 2];
+      if (alpha) raw[to + 3] = rgba[from + 3];
+    }
   }
   const ihdr = Buffer.alloc(13);
   ihdr.writeUInt32BE(size, 0);
   ihdr.writeUInt32BE(size, 4);
   ihdr[8] = 8; // bit depth
-  ihdr[9] = 6; // RGBA
+  ihdr[9] = alpha ? 6 : 2; // RGBA or RGB
   ihdr[10] = 0;
   ihdr[11] = 0;
   ihdr[12] = 0;
@@ -184,3 +194,75 @@ for (const [name, size, options] of outputs) {
   writeFileSync(join(outDir, name), png);
   console.log(`${name}  ${size}x${size}  ${(png.length / 1024).toFixed(1)} kB`);
 }
+
+// --- app icons -------------------------------------------------------------
+
+// The store icons reuse the same artwork. iOS rejects an alpha channel, so those
+// are written as RGB.
+const APP_ICONS = [
+  ...[
+    ['mdpi', 48],
+    ['hdpi', 72],
+    ['xhdpi', 96],
+    ['xxhdpi', 144],
+    ['xxxhdpi', 192],
+  ].map(([density, size]) => [
+    `app/android/app/src/main/res/mipmap-${density}/ic_launcher.png`,
+    size,
+    { maskable: true, alpha: true },
+  ]),
+  ...[
+    ['20x20@1x', 20],
+    ['20x20@2x', 40],
+    ['20x20@3x', 60],
+    ['29x29@1x', 29],
+    ['29x29@2x', 58],
+    ['29x29@3x', 87],
+    ['40x40@1x', 40],
+    ['40x40@2x', 80],
+    ['40x40@3x', 120],
+    ['60x60@2x', 120],
+    ['60x60@3x', 180],
+    ['76x76@1x', 76],
+    ['76x76@2x', 152],
+    ['83.5x83.5@2x', 167],
+    ['1024x1024@1x', 1024],
+  ].map(([name, size]) => [
+    `app/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-${name}.png`,
+    size,
+    { maskable: true, alpha: false },
+  ]),
+];
+
+for (const [relative, size, options] of APP_ICONS) {
+  const target = join(here, '..', relative);
+  mkdirSync(dirname(target), { recursive: true });
+  const png = encodePng(size, render(size, options), { alpha: options.alpha });
+  writeFileSync(target, png);
+}
+console.log(`app icons  ${APP_ICONS.length} files`);
+
+// Android renders the notification small icon as a silhouette, so it needs the
+// mark in white on transparent rather than the full-colour tile.
+for (const [density, size] of [
+  ['mdpi', 24],
+  ['hdpi', 36],
+  ['xhdpi', 48],
+  ['xxhdpi', 72],
+  ['xxxhdpi', 96],
+]) {
+  const source = render(size, { maskable: true });
+  const mono = Buffer.alloc(size * size * 4);
+  for (let i = 0; i < size * size; i++) {
+    const lum =
+      (source[i * 4] * 0.299 + source[i * 4 + 1] * 0.587 + source[i * 4 + 2] * 0.114) / 255;
+    mono[i * 4] = 255;
+    mono[i * 4 + 1] = 255;
+    mono[i * 4 + 2] = 255;
+    mono[i * 4 + 3] = lum < 0.5 ? 255 : 0;
+  }
+  const target = join(here, '..', `app/android/app/src/main/res/drawable-${density}/ic_notification.png`);
+  mkdirSync(dirname(target), { recursive: true });
+  writeFileSync(target, encodePng(size, mono));
+}
+console.log('notification icons  5 files');
