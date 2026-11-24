@@ -31,6 +31,37 @@ python3 -m http.server 4173
 Service workers need `http://localhost` or HTTPS, so `file://` will not cache.
 Everything still generates offline; only the PWA install and cache need a server.
 
+The canonical deployment is <https://psbakre.dev/games/>.
+
+## Hosting
+
+The site is a Cloudflare Worker with static assets (`wrangler.jsonc`), routed at
+`psbakre.dev/*`. The Worker serves the build from `/games/` and redirects the
+apex there. Only runtime files are published — sources, tests and `app/` stay
+out of the bundle.
+
+```sh
+bun run build:web   # copies the runtime files into dist/web/games/
+bun run deploy:web  # builds, then wrangler deploy
+```
+
+Deployment authenticates with the `personal` Cloudflare profile:
+
+```sh
+export CLOUDFLARE_API_TOKEN=$(jq -r '.token' ~/Library/Preferences/cloudflare/config/personal.json)
+export CLOUDFLARE_ACCOUNT_ID=0dfaf1134e69f360cd4e258d400b6e36
+```
+
+The `psbakre.dev` zone must have Namecheap pointed at the pair Cloudflare
+assigned (`earl.ns.cloudflare.com`, `kallie.ns.cloudflare.com`). If those drift,
+the zone shows `pending` and neither the route nor the custom hostname resolves.
+
+`https://daily-games.<account>.workers.dev/games/` always serves the latest
+deploy, whether or not the domain is active.
+
+The GitHub Pages setup below still works as a mirror from `main` at the
+repository root.
+
 ## Tests
 
 Run the puzzle generation and game rule tests locally:
