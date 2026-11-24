@@ -182,33 +182,48 @@ class _TangoBoardState extends State<TangoBoard> {
       children: [
         AspectRatio(
           aspectRatio: 1,
-          child: Container(
-            decoration: BoxDecoration(
-              color: Palette.card,
-              border: Border.all(color: Palette.ink, width: 2),
-              borderRadius: BorderRadius.circular(Frame.cardRadius),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: Stack(
-              children: [
-                Column(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // The stack sits inside the 2 px frame, so badges are placed
+              // against the cells' own box, not the outer border.
+              final size = Size(
+                constraints.maxWidth - 4,
+                constraints.maxHeight - 4,
+              );
+              return Container(
+                key: const ValueKey('tango-board'),
+                decoration: BoxDecoration(
+                  color: Palette.card,
+                  border: Border.all(color: Palette.ink, width: 2),
+                  borderRadius: BorderRadius.circular(Frame.cardRadius),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Stack(
                   children: [
-                    for (var row = 0; row < _size; row++)
-                      Expanded(
-                        child: Row(
-                          children: [
-                            for (var col = 0; col < _size; col++)
-                              Expanded(
-                                child: _cell(row * _size + col, conflicts, accent),
-                              ),
-                          ],
-                        ),
-                      ),
+                    Column(
+                      children: [
+                        for (var row = 0; row < _size; row++)
+                          Expanded(
+                            child: Row(
+                              children: [
+                                for (var col = 0; col < _size; col++)
+                                  Expanded(
+                                    child: _cell(
+                                      row * _size + col,
+                                      conflicts,
+                                      accent,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                    for (final edge in _puzzle.edges) _badge(edge, size),
                   ],
                 ),
-                for (final edge in _puzzle.edges) _badge(edge),
-              ],
-            ),
+              );
+            },
           ),
         ),
         const SizedBox(height: Space.x3),
@@ -307,35 +322,35 @@ class _TangoBoardState extends State<TangoBoard> {
     );
   }
 
-  Widget _badge(TangoEdge edge) {
+  /// Each badge sits on the midpoint of the border its two cells share.
+  Widget _badge(TangoEdge edge, Size size) {
+    final cellWidth = size.width / _size;
+    final cellHeight = size.height / _size;
     final horizontal = edge.b == edge.a + 1;
     final row = edge.a ~/ _size;
     final col = edge.a % _size;
-    final left = horizontal
-        ? (col + 1) / _size
-        : (col + 0.5) / _size;
-    final top = horizontal
-        ? (row + 0.5) / _size
-        : (row + 1) / _size;
+    final centerX = (horizontal ? col + 1 : col + 0.5) * cellWidth;
+    final centerY = (horizontal ? row + 0.5 : row + 1) * cellHeight;
+    final diameter = math.min(22.0, cellWidth * 0.36);
 
-    return Positioned.fill(
-      child: FractionallySizedBox(
-        alignment: Alignment(-1 + 2 * left, -1 + 2 * top),
-        widthFactor: 0.07,
-        heightFactor: 0.07,
-        child: Container(
-          decoration: BoxDecoration(
-            color: Palette.card,
-            shape: BoxShape.circle,
-            border: Border.all(color: Palette.ink, width: 1.5),
-          ),
-          alignment: Alignment.center,
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              edge.same ? '=' : '×',
-              style: AppType.sans(14, weight: 700, height: 1),
-            ),
+    return Positioned(
+      left: centerX - diameter / 2,
+      top: centerY - diameter / 2,
+      width: diameter,
+      height: diameter,
+      child: Container(
+        key: ValueKey('tango-badge-${edge.a}-${edge.b}'),
+        decoration: BoxDecoration(
+          color: Palette.card,
+          shape: BoxShape.circle,
+          border: Border.all(color: Palette.ink, width: 1.5),
+        ),
+        alignment: Alignment.center,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            edge.same ? '=' : '×',
+            style: AppType.sans(14, weight: 700, height: 1),
           ),
         ),
       ),

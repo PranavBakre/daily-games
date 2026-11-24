@@ -1,5 +1,7 @@
 import 'package:daily_games/src/games/merge.dart';
 import 'package:daily_games/src/games/merge_board.dart';
+import 'package:daily_games/src/games/tango.dart';
+import 'package:daily_games/src/games/tango_board.dart';
 import 'package:daily_games/src/games/zip_board.dart';
 import 'package:daily_games/src/theme.dart';
 import 'package:material_ui/material_ui.dart';
@@ -61,6 +63,8 @@ void main() {
     });
   });
 
+  group('Tango', _tangoBadgeAlignment);
+
   group('Number Merge', () {
     testWidgets('tapping two equal neighbours merges them', (tester) async {
       const seed = 'merge:daily:2026-11-23';
@@ -99,4 +103,55 @@ void main() {
     }
   }
   return null;
+}
+
+void _tangoBadgeAlignment() {
+  testWidgets('tango badges sit on the border their cells share', (
+    tester,
+  ) async {
+    const seed = 'tango:daily:2026-11-23';
+    final puzzle = generateTango(seed, 'medium');
+    expect(puzzle.edges, isNotEmpty);
+
+    await tester.pumpWidget(
+      _frame(
+        TangoBoard(
+          seed: seed,
+          difficulty: 'medium',
+          saved: null,
+          onChanged: (_) {},
+          onSolved: (_) {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final board = tester.getRect(find.byKey(const ValueKey('tango-board')));
+    final inner = board.deflate(2);
+    final cellWidth = inner.width / 6;
+    final cellHeight = inner.height / 6;
+
+    for (final edge in puzzle.edges) {
+      final badge = find.byKey(ValueKey('tango-badge-${edge.a}-${edge.b}'));
+      expect(badge, findsOneWidget);
+      final center = tester.getCenter(badge);
+      final horizontal = edge.b == edge.a + 1;
+      final row = edge.a ~/ 6;
+      final col = edge.a % 6;
+      final expectedX =
+          inner.left + (horizontal ? col + 1 : col + 0.5) * cellWidth;
+      final expectedY =
+          inner.top + (horizontal ? row + 0.5 : row + 1) * cellHeight;
+      expect(
+        (center.dx - expectedX).abs(),
+        lessThan(0.5),
+        reason: 'edge ${edge.a}-${edge.b} is off horizontally',
+      );
+      expect(
+        (center.dy - expectedY).abs(),
+        lessThan(0.5),
+        reason: 'edge ${edge.a}-${edge.b} is off vertically',
+      );
+    }
+  });
 }
