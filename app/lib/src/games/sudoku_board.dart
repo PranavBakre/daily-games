@@ -24,7 +24,8 @@ class SudokuBoard extends StatefulWidget {
   State<SudokuBoard> createState() => _SudokuBoardState();
 }
 
-class _SudokuBoardState extends State<SudokuBoard> {
+class _SudokuBoardState extends State<SudokuBoard>
+    with SingleTickerProviderStateMixin {
   late final SudokuPuzzle _puzzle =
       generateSudoku(widget.seed, widget.difficulty);
   late final SudokuLayout _layout = sudokuLayout(_puzzle.size);
@@ -38,6 +39,9 @@ class _SudokuBoardState extends State<SudokuBoard> {
   bool _solved = false;
   String _message = '';
   int _flagged = -1;
+  Set<int> _doneUnits = {};
+  Map<int, int> _sweep = {};
+  late final AnimationController _sweepController;
 
   int get _n => _puzzle.size;
   int get _total => _layout.cells;
@@ -58,6 +62,41 @@ class _SudokuBoardState extends State<SudokuBoard> {
     } else {
       _selected = _firstEmpty();
     }
+    _sweepController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..addListener(() => setState(() {}));
+    _doneUnits = _completedUnits();
+  }
+
+  Set<int> _completedUnits() {
+    final done = <int>{};
+    for (var unit = 0; unit < _layout.units.length; unit++) {
+      final cells = _layout.units[unit];
+      if (cells.every((i) => _values[i] != 0 && _values[i] == _puzzle.solution[i])) {
+        done.add(unit);
+      }
+    }
+    return done;
+  }
+
+  /// Sweeps a unit green the moment it is finished, 40 ms per cell, the way the
+  /// web board does.
+  void _sweepCompletedUnits() {
+    final done = _completedUnits();
+    final fresh = done.difference(_doneUnits);
+    _doneUnits = done;
+    if (fresh.isEmpty) return;
+    if (MediaQuery.maybeDisableAnimationsOf(context) ?? false) return;
+    _sweep = {};
+    for (final unit in fresh) {
+      var step = 0;
+      for (final cell in _layout.units[unit]) {
+        _sweep[cell] = step * 40;
+        step++;
+      }
+    }
+    _sweepController.forward(from: 0);
   }
 
   void _restoreValues(Object? raw) {
@@ -165,6 +204,7 @@ class _SudokuBoardState extends State<SudokuBoard> {
       }
     });
     _notify();
+    _sweepCompletedUnits();
     _checkSolved();
   }
 
@@ -219,6 +259,7 @@ class _SudokuBoardState extends State<SudokuBoard> {
       _message = 'Hint: a ${_puzzle.solution[target]} goes here.';
     });
     _notify();
+    _sweepCompletedUnits();
     _checkSolved();
   }
 
@@ -267,9 +308,16 @@ class _SudokuBoardState extends State<SudokuBoard> {
   }
 
   @override
+  void dispose() {
+    _sweepController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final accent = Accents.sudoku;
     final conflicts = _conflicts;
+    final done = {for (final unit in _doneUnits) ..._layout.units[unit]};
     final filled = _values.where((value) => value != 0).length;
     final status = _message.isNotEmpty
         ? _message
@@ -296,7 +344,7 @@ class _SudokuBoardState extends State<SudokuBoard> {
                       children: [
                         for (var col = 0; col < _n; col++)
                           Expanded(
-                            child: _cell(row * _n + col, conflicts, accent),
+                            child: _cell(row * _n + col, conflicts, accent, done),
                           ),
                       ],
                     ),
@@ -355,7 +403,27 @@ class _SudokuBoardState extends State<SudokuBoard> {
     return counts;
   }
 
-  Widget _cell(int index, Set<int> conflicts, GameAccent accent) {
+  Color _sweepColor(int index) {
+    final delay = _sweep[index];
+    if (delay == null || !_sweepController.isAnimating) return Palette.goodWash;
+    final t = (_sweepController.value * 900 - delay) / 700;
+    if (t <= 0) return Palette.card;
+    if (t < 0.3) {
+      return Color.lerp(Palette.card, Accents.sudoku.block, t / 0.3)!;
+    }
+    return Color.lerp(
+      Accents.sudoku.block,
+      Palette.goodWash,
+      ((t - 0.3) / 0.7).clamp(0.0, 1.0),
+    )!;
+  }
+
+  Widget _cell(
+    int index,
+    Set<int> conflicts,
+    GameAccent accent,
+    Set<int> done,
+  ) {
     final value = _values[index];
     final given = _puzzle.givens[index] != 0;
     final selected = _selected == index;
@@ -368,11 +436,13 @@ class _SudokuBoardState extends State<SudokuBoard> {
         ? Palette.goodWash
         : conflicts.contains(index)
             ? Palette.badWash
-            : selected || same
-                ? Palette.focus
-                : isPeer
-                    ? Palette.peer
-                    : Palette.card;
+            : done.contains(index)
+                ? _sweepColor(index)
+                : selected || same
+                    ? Palette.focus
+                    : isPeer
+                        ? Palette.peer
+                        : Palette.card;
 
     final borders = Border(
       right: col == _n - 1

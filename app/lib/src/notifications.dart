@@ -92,6 +92,7 @@ class Reminders {
           channelId,
           'Daily reminder',
           channelDescription: 'One reminder a day for the puzzles',
+          icon: 'ic_notification',
           importance: Importance.defaultImportance,
           priority: Priority.defaultPriority,
         ),

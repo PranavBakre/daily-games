@@ -471,11 +471,6 @@ class _Footer extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('$done of $total solved today', style: AppType.sans(14)),
-          const SizedBox(height: Space.x2),
-          Text(
-            'Works offline. Your progress stays on this device.',
-            style: AppType.sans(12, height: 1.5, color: Palette.ink2),
-          ),
         ],
       ),
     );
