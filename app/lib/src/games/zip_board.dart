@@ -91,7 +91,9 @@ class _ZipBoardState extends State<ZipBoard> {
   bool _walled(int a, int b) {
     final key = a < b ? a * 1000 + b : b * 1000 + a;
     for (final wall in _puzzle.walls) {
-      final other = wall[0] < wall[1] ? wall[0] * 1000 + wall[1] : wall[1] * 1000 + wall[0];
+      final other = wall[0] < wall[1]
+          ? wall[0] * 1000 + wall[1]
+          : wall[1] * 1000 + wall[0];
       if (other == key) return true;
     }
     return false;
@@ -160,7 +162,8 @@ class _ZipBoardState extends State<ZipBoard> {
   }
 
   void _afterChange() {
-    final complete = _path.length == _size && _path.isNotEmpty && _path.last == _finish;
+    final complete =
+        _path.length == _size && _path.isNotEmpty && _path.last == _finish;
     setState(() {
       _solved = complete;
       if (complete) _message = 'Solved';
@@ -170,6 +173,24 @@ class _ZipBoardState extends State<ZipBoard> {
     } else {
       _notify();
     }
+  }
+
+  /// A line that reaches the highest number with cells still empty can never
+  /// grow again, so the board has to say why it stopped accepting a drag.
+  bool get _stuckAtFinish =>
+      !_solved &&
+      _path.isNotEmpty &&
+      _path.last == _finish &&
+      _path.length < _size;
+
+  String get _status {
+    if (_message.isNotEmpty) return _message;
+    if (_stuckAtFinish) {
+      final left = _size - _path.length;
+      return 'The line reached ${_puzzle.numbers[_finish]} with $left '
+          '${left == 1 ? 'cell' : 'cells'} still empty — drag back to reroute.';
+    }
+    return '${_path.length} of $_size cells';
   }
 
   Map<String, dynamic> _snapshot() => {
@@ -232,9 +253,7 @@ class _ZipBoardState extends State<ZipBoard> {
   @override
   Widget build(BuildContext context) {
     final accent = Accents.zip;
-    final status = _message.isNotEmpty
-        ? _message
-        : '${_path.length} of $_size cells';
+    final status = _status;
 
     return Column(
       children: [
@@ -286,8 +305,8 @@ class _ZipBoardState extends State<ZipBoard> {
           ),
         ),
         const SizedBox(height: Space.x3),
-        SizedBox(
-          height: 20,
+        ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 20),
           child: Text(
             status,
             textAlign: TextAlign.center,
@@ -343,13 +362,7 @@ class _ZipBoardState extends State<ZipBoard> {
           color: Palette.ink,
           shape: BoxShape.circle,
           boxShadow: reached
-              ? [
-                  BoxShadow(
-                    color: accent.ink,
-                    blurRadius: 0,
-                    spreadRadius: 3,
-                  ),
-                ]
+              ? [BoxShadow(color: accent.ink, blurRadius: 0, spreadRadius: 3)]
               : null,
         ),
         alignment: Alignment.center,
@@ -408,7 +421,8 @@ class _ZipPainter extends CustomPainter {
         ..strokeWidth = cellWidth * 0.38
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round;
-      final trace = Path()..moveTo(center(path.first).dx, center(path.first).dy);
+      final trace = Path()
+        ..moveTo(center(path.first).dx, center(path.first).dy);
       for (var i = 1; i < path.length; i++) {
         final point = center(path[i]);
         trace.lineTo(point.dx, point.dy);

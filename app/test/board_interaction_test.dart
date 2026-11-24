@@ -4,6 +4,7 @@ import 'package:daily_games/src/games/merge.dart';
 import 'package:daily_games/src/games/merge_board.dart';
 import 'package:daily_games/src/games/tango.dart';
 import 'package:daily_games/src/games/tango_board.dart';
+import 'package:daily_games/src/games/zip.dart';
 import 'package:daily_games/src/games/zip_board.dart';
 import 'package:daily_games/src/theme.dart';
 import 'package:material_ui/material_ui.dart';
@@ -64,6 +65,87 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('1 of 36 cells'), findsOneWidget);
+    });
+  });
+
+  group('Zip', () {
+    testWidgets('a line stuck on the highest number explains itself', (
+      tester,
+    ) async {
+      // The route a player actually drew on 2026-11-24: it reaches cell 3
+      // (label 7) having skipped cells 9 and 20, and cannot grow again.
+      const stuck = [
+        35,
+        29,
+        23,
+        17,
+        11,
+        5,
+        4,
+        10,
+        16,
+        22,
+        28,
+        34,
+        33,
+        32,
+        31,
+        30,
+        24,
+        18,
+        12,
+        6,
+        0,
+        1,
+        7,
+        13,
+        19,
+        25,
+        26,
+        27,
+        21,
+        15,
+        14,
+        8,
+        2,
+        3,
+      ];
+      await tester.pumpWidget(
+        _frame(
+          ZipBoard(
+            seed: 'zip:daily:2026-11-24',
+            difficulty: 'medium',
+            saved: {'path': stuck, 'hints': 0},
+            onChanged: (_) {},
+            onSolved: (_) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.textContaining('reached 7 with 2 cells still empty'),
+        findsOneWidget,
+      );
+      expect(find.text('34 of 36 cells'), findsNothing);
+    });
+
+    testWidgets('a complete line is not reported as stuck', (tester) async {
+      final solution = generateZip('zip:daily:2026-11-24', 'medium').solution;
+      await tester.pumpWidget(
+        _frame(
+          ZipBoard(
+            seed: 'zip:daily:2026-11-24',
+            difficulty: 'medium',
+            saved: {'path': solution, 'hints': 0},
+            onChanged: (_) {},
+            onSolved: (_) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('still empty'), findsNothing);
     });
   });
 
