@@ -227,7 +227,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    final accent = widget.game.accent;
     final padding = MediaQuery.paddingOf(context);
     final todayResult = widget.store.result(widget.game.id, dateKey());
 
@@ -286,14 +285,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                       ),
                     ),
                   ],
-                  const SizedBox(height: Space.x4),
-                  Center(
-                    child: Container(
-                      width: 24,
-                      height: 2,
-                      color: accent.block,
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -332,15 +323,17 @@ class _Header extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Pressable(
-            onTap: onBack,
-            radius: Frame.pillRadius,
-            child: Container(
-              width: 40,
-              height: 40,
-              margin: const EdgeInsets.only(left: -8),
-              alignment: Alignment.center,
-              child: const _BackChevron(),
+          Transform.translate(
+            offset: const Offset(-8, 0),
+            child: Pressable(
+              onTap: onBack,
+              radius: Frame.pillRadius,
+              child: Container(
+                width: 40,
+                height: 40,
+                alignment: Alignment.center,
+                child: const _BackChevron(),
+              ),
             ),
           ),
           const SizedBox(width: Space.x2),

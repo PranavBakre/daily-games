@@ -18,6 +18,7 @@ class DailyGamesApp extends StatelessWidget {
     return MaterialApp(
       title: 'Daily Games',
       debugShowCheckedModeBanner: false,
+      themeMode: ThemeMode.light,
       theme: buildTheme(),
       home: _HubHost(store: store, reminders: reminders),
     );

@@ -91,9 +91,10 @@ abstract final class AppType {
   }
 }
 
-ThemeData buildTheme() {
+ThemeData buildTheme({String? fontFamily}) {
   return ThemeData(
     useMaterial3: true,
+    fontFamily: fontFamily,
     scaffoldBackgroundColor: Palette.paper,
     canvasColor: Palette.paper,
     splashFactory: NoSplash.splashFactory,

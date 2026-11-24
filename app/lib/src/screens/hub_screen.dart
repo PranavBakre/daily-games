@@ -13,6 +13,7 @@ class HubScreen extends StatelessWidget {
     required this.onOpenGame,
     required this.reminderLabel,
     required this.onReminderTap,
+    this.now,
     super.key,
   });
 
@@ -20,12 +21,17 @@ class HubScreen extends StatelessWidget {
   final void Function(GameInfo game) onOpenGame;
   final String reminderLabel;
   final VoidCallback onReminderTap;
+  final DateTime? now;
 
   @override
   Widget build(BuildContext context) {
     final padding = MediaQuery.paddingOf(context);
-    final today = DateTime.now();
-    final done = store.solvedTodayCount();
+    final today = now ?? DateTime.now();
+    final todayKey = dateKey(today);
+    final done = [
+      for (final game in games)
+        if (store.result(game.id, todayKey) != null) game,
+    ].length;
     final allSolved = done == games.length;
 
     return Scaffold(
@@ -49,13 +55,17 @@ class HubScreen extends StatelessWidget {
                   _Masthead(date: today, number: puzzleNumber(today)),
                   const SizedBox(height: Space.x5),
                   _SectionTitle(
-                    allSolved ? 'All solved. Back tomorrow.' : "Today's puzzles",
+                    allSolved
+                        ? 'All solved. Back tomorrow.'
+                        : "Today's puzzles",
                   ),
                   const SizedBox(height: Space.x4),
                   for (final game in games) ...[
                     _GameCard(
                       game: game,
                       store: store,
+                      todayKey: todayKey,
+                      number: puzzleNumber(today),
                       onTap: () => onOpenGame(game),
                     ),
                     if (game != games.last) const SizedBox(height: Space.x4),
@@ -63,7 +73,7 @@ class HubScreen extends StatelessWidget {
                   const SizedBox(height: Space.x5),
                   const _SectionTitle('This week'),
                   const SizedBox(height: Space.x3),
-                  _WeekStrip(store: store),
+                  _WeekStrip(store: store, days: lastSevenDays(today)),
                   const SizedBox(height: Space.x5),
                   _ReminderRow(label: reminderLabel, onTap: onReminderTap),
                   const SizedBox(height: Space.x4),
@@ -136,22 +146,26 @@ class _GameCard extends StatelessWidget {
   const _GameCard({
     required this.game,
     required this.store,
+    required this.todayKey,
+    required this.number,
     required this.onTap,
   });
 
   final GameInfo game;
   final AppStore store;
+  final String todayKey;
+  final int number;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final result = store.result(game.id, dateKey());
+    final result = store.result(game.id, todayKey);
     final streak = store.liveStreak(game.id);
-    final status = StringBuffer(
-      'No. ${puzzleNumber()} · ${game.labelFor(game.defaultDifficulty)}',
-    );
-    if (result != null) status.write(' · ${formatTime(result.ms)}');
-    if (streak > 1) status.write(' · $streak-day streak');
+    final status = <String>[
+      'No. $number · ${game.labelFor(game.defaultDifficulty)}',
+      if (result != null) '· ${formatTime(result.ms)}',
+      if (streak > 1) '· $streak-day streak',
+    ];
 
     return Container(
       decoration: BoxDecoration(
@@ -166,51 +180,68 @@ class _GameCard extends StatelessWidget {
             onTap: onTap,
             child: Padding(
               padding: const EdgeInsets.only(right: Space.x4),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Container(
-                    width: 88,
-                    constraints: const BoxConstraints(minHeight: 112),
-                    decoration: BoxDecoration(
-                      color: game.accent.block,
-                      border: const Border(
-                        right: BorderSide(color: Palette.line, width: 1),
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Container(
+                      width: 88,
+                      constraints: const BoxConstraints(minHeight: 112),
+                      decoration: BoxDecoration(
+                        color: game.accent.block,
+                        border: const Border(
+                          right: BorderSide(color: Palette.line, width: 1),
+                        ),
                       ),
+                      alignment: Alignment.center,
+                      child: GameIcon(game.id),
                     ),
-                    alignment: Alignment.center,
-                    child: GameIcon(game.id),
-                  ),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: Space.x4,
-                        vertical: Space.x3,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(game.name, style: AppType.serif(28, height: 1.1)),
-                          const SizedBox(height: Space.x1),
-                          Text(game.tagline, style: AppType.sans(14, height: 1.35)),
-                          const SizedBox(height: Space.x2),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  status.toString(),
-                                  style: AppType.sans(12, color: Palette.ink2),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: Space.x4,
+                          vertical: Space.x3,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              game.name,
+                              style: AppType.serif(28, height: 1.1),
+                            ),
+                            const SizedBox(height: Space.x1),
+                            Text(
+                              game.tagline,
+                              style: AppType.sans(14, height: 1.35),
+                            ),
+                            const SizedBox(height: Space.x2),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Wrap(
+                                    spacing: Space.x1,
+                                    children: [
+                                      for (final part in status)
+                                        Text(
+                                          part,
+                                          style: AppType.sans(
+                                            12,
+                                            color: Palette.ink2,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: Space.x3),
-                              _PlayPill(solved: result != null),
-                            ],
-                          ),
-                        ],
+                                const SizedBox(width: Space.x3),
+                                _PlayPill(solved: result != null),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -323,13 +354,13 @@ class _CheckPainter extends CustomPainter {
 }
 
 class _WeekStrip extends StatelessWidget {
-  const _WeekStrip({required this.store});
+  const _WeekStrip({required this.store, required this.days});
 
   final AppStore store;
+  final List<WeekDay> days;
 
   @override
   Widget build(BuildContext context) {
-    final days = lastSevenDays();
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -346,7 +377,10 @@ class _WeekStrip extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  Text(weekdayLetter(day.date), style: AppType.sans(12, weight: 600)),
+                  Text(
+                    weekdayLetter(day.date),
+                    style: AppType.sans(12, weight: 600),
+                  ),
                   const SizedBox(height: Space.x2),
                   for (final game in games)
                     Padding(
@@ -409,7 +443,10 @@ class _ReminderRow extends StatelessWidget {
                 ],
               ),
             ),
-            Text('Change', style: AppType.sans(14, weight: 600, color: Palette.ink2)),
+            Text(
+              'Change',
+              style: AppType.sans(14, weight: 600, color: Palette.ink2),
+            ),
           ],
         ),
       ),

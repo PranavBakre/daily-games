@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../games/merge.dart';
 import '../theme.dart';
+import '../widgets/drag_surface.dart';
 import '../widgets/pressable.dart';
 
 class MergeBoard extends StatefulWidget {
@@ -96,10 +97,8 @@ class _MergeBoardState extends State<MergeBoard> {
     }
   }
 
-  void _onTap(Offset position) {
+  void _tapIndex(int index) {
     if (_solved) return;
-    final index = _indexAt(position);
-    if (index == null) return;
     final value = _cells[index];
     if (_selected == null) {
       if (value == 0) return;
@@ -133,21 +132,6 @@ class _MergeBoardState extends State<MergeBoard> {
     return row * _size + col;
   }
 
-  void _onPanStart(DragStartDetails details) {
-    if (_solved) return;
-    final index = _indexAt(details.localPosition);
-    if (index == null || _cells[index] == 0) return;
-    setState(() {
-      _dragFrom = index;
-      _start = details.localPosition;
-      _offset = Offset.zero;
-      _axis = null;
-      _selected = index;
-      _destination = null;
-      _message = '';
-    });
-  }
-
   void _onPanUpdate(DragUpdateDetails details) {
     final from = _dragFrom;
     if (from == null) return;
@@ -169,14 +153,19 @@ class _MergeBoardState extends State<MergeBoard> {
   void _onPanEnd() {
     final from = _dragFrom;
     final to = _destination;
+    final moved = _axis != null;
     setState(() {
       _dragFrom = null;
       _offset = Offset.zero;
       _axis = null;
+      _destination = null;
     });
-    if (from == null || to == null) return;
-    setState(() => _destination = null);
-    _applyMerge(from, to);
+    if (from == null) return;
+    if (!moved) {
+      _tapIndex(from);
+      return;
+    }
+    if (to != null) _applyMerge(from, to);
   }
 
   int? _project(int from, String axis, double distance) {
@@ -232,13 +221,25 @@ class _MergeBoardState extends State<MergeBoard> {
           child: LayoutBuilder(
             builder: (context, constraints) {
               _pitch = (constraints.maxWidth - 3) / _size;
-              return GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTapUp: (details) => _onTap(details.localPosition),
-                onPanStart: _onPanStart,
-                onPanUpdate: _onPanUpdate,
-                onPanEnd: (_) => _onPanEnd(),
-                onPanCancel: () {
+              return DragSurface(
+                onStart: (details) {
+                  final index = _indexAt(details.localPosition);
+                  if (_solved || index == null || _cells[index] == 0) {
+                    _dragFrom = null;
+                    return;
+                  }
+                  setState(() {
+                    _dragFrom = index;
+                    _start = details.localPosition;
+                    _offset = Offset.zero;
+                    _axis = null;
+                    _destination = null;
+                    _message = '';
+                  });
+                },
+                onUpdate: _onPanUpdate,
+                onEnd: _onPanEnd,
+                onCancel: () {
                   setState(() {
                     _dragFrom = null;
                     _offset = Offset.zero;
@@ -344,6 +345,6 @@ class _MergeBoardState extends State<MergeBoard> {
           )
         : tile;
 
-    return body;
+    return KeyedSubtree(key: ValueKey('merge-tile-$index'), child: body);
   }
 }

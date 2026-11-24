@@ -222,7 +222,7 @@ class _TangoBoardState extends State<TangoBoard> {
         ),
         const SizedBox(height: Space.x1),
         Text(
-          'Tap a cell: sun → moon → empty',
+          'Tap a cell: sun, moon, empty',
           style: AppType.sans(12, color: Palette.ink2),
         ),
         const SizedBox(height: Space.x3),
@@ -278,22 +278,24 @@ class _TangoBoardState extends State<TangoBoard> {
           ),
         ),
         child: Stack(
-          alignment: Alignment.center,
+          fit: StackFit.expand,
           children: [
             if (value != 0)
-              FractionallySizedBox(
-                widthFactor: 0.54,
-                heightFactor: 0.54,
-                child: CustomPaint(
-                  painter: _TangoSymbolPainter(
-                    sun: value == tangoSun,
-                    color: value == tangoSun ? Palette.sun : Palette.moon,
+              Center(
+                child: FractionallySizedBox(
+                  widthFactor: 0.54,
+                  heightFactor: 0.54,
+                  child: CustomPaint(
+                    painter: _TangoSymbolPainter(
+                      sun: value == tangoSun,
+                      color: value == tangoSun ? Palette.sun : Palette.moon,
+                    ),
                   ),
                 ),
               ),
             if (_flagged == index)
-              Positioned.fill(
-                child: Container(
+              IgnorePointer(
+                child: DecoratedBox(
                   decoration: BoxDecoration(
                     border: Border.all(color: Palette.bad, width: 2),
                   ),

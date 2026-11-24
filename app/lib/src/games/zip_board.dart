@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../games/zip.dart';
 import '../theme.dart';
+import '../widgets/drag_surface.dart';
 import '../widgets/pressable.dart';
 
 class ZipBoard extends StatefulWidget {
@@ -152,6 +153,7 @@ class _ZipBoardState extends State<ZipBoard> {
       if (notify) _afterChange();
       return true;
     }
+    if (_path.isEmpty) return false;
     final extended = _extendStraight(index);
     if (extended && notify) _afterChange();
     return extended;
@@ -241,25 +243,20 @@ class _ZipBoardState extends State<ZipBoard> {
           child: LayoutBuilder(
             builder: (context, constraints) {
               final size = Size(constraints.maxWidth, constraints.maxHeight);
-              return GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onPanStart: (details) {
+              return DragSurface(
+                onStart: (details) {
                   final cell = _cellAt(details.localPosition, size);
                   if (cell == null) return;
                   _dragging = true;
                   _apply(cell);
                 },
-                onPanUpdate: (details) {
+                onUpdate: (details) {
                   if (!_dragging) return;
                   final cell = _cellAt(details.localPosition, size);
                   if (cell != null) _apply(cell);
                 },
-                onPanEnd: (_) => _dragging = false,
-                onPanCancel: () => _dragging = false,
-                onTapUp: (details) {
-                  final cell = _cellAt(details.localPosition, size);
-                  if (cell != null) _apply(cell);
-                },
+                onEnd: () => _dragging = false,
+                onCancel: () => _dragging = false,
                 child: Container(
                   decoration: BoxDecoration(
                     color: Palette.card,

@@ -393,6 +393,7 @@ class _SudokuBoardState extends State<SudokuBoard> {
       child: Container(
         decoration: BoxDecoration(color: background, border: borders),
         child: Stack(
+          fit: StackFit.expand,
           children: [
             if (value == 0)
               _NotesGrid(n: _n, mask: _notes[index])
@@ -413,16 +414,16 @@ class _SudokuBoardState extends State<SudokuBoard> {
                 ),
               ),
             if (selected)
-              Positioned.fill(
-                child: Container(
+              IgnorePointer(
+                child: DecoratedBox(
                   decoration: BoxDecoration(
                     border: Border.all(color: accent.ink, width: 2),
                   ),
                 ),
               ),
             if (_flagged == index)
-              Positioned.fill(
-                child: Container(
+              IgnorePointer(
+                child: DecoratedBox(
                   decoration: BoxDecoration(
                     border: Border.all(color: Palette.bad, width: 2),
                   ),

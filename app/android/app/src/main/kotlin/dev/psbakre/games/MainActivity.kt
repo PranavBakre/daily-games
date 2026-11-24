@@ -1,4 +1,4 @@
-package dev.psbakre.daily_games
+package dev.psbakre.games
 
 import io.flutter.embedding.android.FlutterActivity
 
