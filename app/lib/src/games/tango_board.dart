@@ -239,11 +239,6 @@ class _TangoBoardState extends State<TangoBoard> {
             style: AppType.sans(14, color: Palette.ink2),
           ),
         ),
-        const SizedBox(height: Space.x1),
-        Text(
-          'Tap a cell: sun, moon, empty',
-          style: AppType.sans(12, color: Palette.ink2),
-        ),
         const SizedBox(height: Space.x3),
         Row(
           children: [

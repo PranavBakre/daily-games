@@ -12,14 +12,16 @@ class HubScreen extends StatelessWidget {
     required this.store,
     required this.onOpenGame,
     required this.reminderLabel,
+    required this.reminderEnabled,
     required this.onReminderTap,
     this.now,
     super.key,
   });
 
   final AppStore store;
-  final void Function(GameInfo game) onOpenGame;
+  final void Function(GameInfo game, {required bool practice}) onOpenGame;
   final String reminderLabel;
+  final bool reminderEnabled;
   final VoidCallback onReminderTap;
   final DateTime? now;
 
@@ -52,7 +54,12 @@ class HubScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _Masthead(date: today, number: puzzleNumber(today)),
+                  _Masthead(
+                    date: today,
+                    number: puzzleNumber(today),
+                    done: done,
+                    total: games.length,
+                  ),
                   const SizedBox(height: Space.x5),
                   _SectionTitle(
                     allSolved
@@ -66,7 +73,8 @@ class HubScreen extends StatelessWidget {
                       store: store,
                       todayKey: todayKey,
                       number: puzzleNumber(today),
-                      onTap: () => onOpenGame(game),
+                      onTap: () => onOpenGame(game, practice: false),
+                      onPractice: () => onOpenGame(game, practice: true),
                     ),
                     if (game != games.last) const SizedBox(height: Space.x4),
                   ],
@@ -75,9 +83,11 @@ class HubScreen extends StatelessWidget {
                   const SizedBox(height: Space.x3),
                   _WeekStrip(store: store, days: lastSevenDays(today)),
                   const SizedBox(height: Space.x5),
-                  _ReminderRow(label: reminderLabel, onTap: onReminderTap),
-                  const SizedBox(height: Space.x4),
-                  _Footer(done: done, total: games.length),
+                  _ReminderRow(
+                    label: reminderLabel,
+                    enabled: reminderEnabled,
+                    onTap: onReminderTap,
+                  ),
                 ],
               ),
             ),
@@ -89,10 +99,17 @@ class HubScreen extends StatelessWidget {
 }
 
 class _Masthead extends StatelessWidget {
-  const _Masthead({required this.date, required this.number});
+  const _Masthead({
+    required this.date,
+    required this.number,
+    required this.done,
+    required this.total,
+  });
 
   final DateTime date;
   final int number;
+  final int done;
+  final int total;
 
   @override
   Widget build(BuildContext context) {
@@ -109,10 +126,22 @@ class _Masthead extends StatelessWidget {
           decoration: const BoxDecoration(
             border: Border(top: BorderSide(color: Palette.ink, width: 1)),
           ),
-          child: Text(
-            '${longDate(date)} · No. $number',
-            style: AppType.sans(14, color: Palette.ink),
-            textAlign: TextAlign.center,
+          child: Column(
+            children: [
+              Text(
+                '${longDate(date)} · No. $number',
+                style: AppType.sans(14, color: Palette.ink),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: Space.x0),
+              Text(
+                done == total
+                    ? 'All $total solved today'
+                    : '$done of $total solved today · ${total - done} left',
+                style: AppType.sans(12, color: Palette.ink2),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ),
         ),
         Container(
@@ -149,6 +178,7 @@ class _GameCard extends StatelessWidget {
     required this.todayKey,
     required this.number,
     required this.onTap,
+    required this.onPractice,
   });
 
   final GameInfo game;
@@ -156,6 +186,7 @@ class _GameCard extends StatelessWidget {
   final String todayKey;
   final int number;
   final VoidCallback onTap;
+  final VoidCallback onPractice;
 
   @override
   Widget build(BuildContext context) {
@@ -164,7 +195,7 @@ class _GameCard extends StatelessWidget {
     final status = <String>[
       'No. $number · ${game.labelFor(game.defaultDifficulty)}',
       if (result != null) '· ${formatTime(result.ms)}',
-      if (streak > 1) '· $streak-day streak',
+      if (streak >= 1) '· $streak-day streak',
     ];
 
     return Container(
@@ -250,7 +281,7 @@ class _GameCard extends StatelessWidget {
               border: Border(top: BorderSide(color: Palette.line, width: 1)),
             ),
             child: Pressable(
-              onTap: onTap,
+              onTap: onPractice,
               child: Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: Space.x4,
@@ -258,9 +289,11 @@ class _GameCard extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
+                    Text('Practice', style: AppType.sans(14, weight: 600)),
+                    const SizedBox(width: Space.x1),
                     Text(
-                      'Practice with a new puzzle',
-                      style: AppType.sans(14, weight: 600),
+                      '· a new puzzle',
+                      style: AppType.sans(14, color: Palette.ink2),
                     ),
                   ],
                 ),
@@ -411,9 +444,14 @@ class _WeekStrip extends StatelessWidget {
 }
 
 class _ReminderRow extends StatelessWidget {
-  const _ReminderRow({required this.label, required this.onTap});
+  const _ReminderRow({
+    required this.label,
+    required this.enabled,
+    required this.onTap,
+  });
 
   final String label;
+  final bool enabled;
   final VoidCallback onTap;
 
   @override
@@ -449,29 +487,6 @@ class _ReminderRow extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _Footer extends StatelessWidget {
-  const _Footer({required this.done, required this.total});
-
-  final int done;
-  final int total;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.only(top: Space.x3),
-      decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: Palette.line, width: 1)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('$done of $total solved today', style: AppType.sans(14)),
-        ],
       ),
     );
   }

@@ -49,16 +49,18 @@ class _HubHost extends StatelessWidget {
               : 'Off — get a nudge when the new puzzles land',
           onReminderTap: () =>
               showReminderSheet(context, store: store, reminders: reminders),
-          onOpenGame: (game) => Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => GameScreen(
-                game: game,
-                store: store,
-                mode: 'daily',
-                difficulty: game.defaultDifficulty,
+          reminderEnabled: enabled,
+          onOpenGame: (game, {required bool practice}) =>
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => GameScreen(
+                    game: game,
+                    store: store,
+                    mode: practice ? 'practice' : 'daily',
+                    difficulty: game.defaultDifficulty,
+                  ),
+                ),
               ),
-            ),
-          ),
         );
       },
     );

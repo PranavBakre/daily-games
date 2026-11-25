@@ -51,8 +51,9 @@ void main() {
         store: _seededStore(),
         now: _now,
         reminderLabel: 'Every day at 9:00 AM',
+        reminderEnabled: true,
         onReminderTap: () {},
-        onOpenGame: (_) {},
+        onOpenGame: (_, {required bool practice}) {},
       ),
     );
     await expectGolden(tester, 'hub');
@@ -65,8 +66,9 @@ void main() {
         store: _seededStore(),
         now: _now,
         reminderLabel: 'Every day at 9:00 AM',
+        reminderEnabled: true,
         onReminderTap: () {},
-        onOpenGame: (_) {},
+        onOpenGame: (_, {required bool practice}) {},
       ),
       size: const Size(390, 1200),
     );
@@ -80,8 +82,9 @@ void main() {
         store: AppStore(clock: () => _now),
         now: _now,
         reminderLabel: 'Off — get a nudge when the new puzzles land',
+        reminderEnabled: false,
         onReminderTap: () {},
-        onOpenGame: (_) {},
+        onOpenGame: (_, {required bool practice}) {},
       ),
     );
     await expectGolden(tester, 'hub-empty');

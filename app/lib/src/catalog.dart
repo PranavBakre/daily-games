@@ -65,6 +65,7 @@ const tangoGame = GameInfo(
     'Each row and column holds three suns and three moons.',
     'No more than two of the same symbol side by side.',
     'Cells joined by = match; cells joined by × differ.',
+    'Tap a cell to cycle sun, moon, empty.',
   ],
   defaultDifficulty: 'medium',
   difficulties: _standardDifficulties,
@@ -77,8 +78,8 @@ const sudokuGame = GameInfo(
   tagline: 'Fill every row, column and box.',
   rules: [
     'Fill every row, column and box with each number once.',
-    'Tap a cell, then a number. Notes pencils in candidates.',
-    'Hint points out a wrong number, or fills one cell for you.',
+    'Mini boards use 2×3 boxes. Tap a cell, then a number.',
+    'Notes marks candidates; Hint fills a cell or flags a wrong one.',
   ],
   defaultDifficulty: 'mini',
   difficulties: [
